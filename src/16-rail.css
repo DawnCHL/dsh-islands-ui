@@ -9,9 +9,9 @@ body[data-islands-ui] .isl-rail {
 }
 
 @media (min-width: 768px) {
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rail {
+  body[data-islands-ui] .isl-rail {
     position: fixed;
-    top: calc(var(--isl-topbar-height) + 10px);
+    top: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + 10px);
     left: var(--isl-gap);
     z-index: 25;
     display: flex;
@@ -161,7 +161,7 @@ body[data-islands-ui] .isl-railSettings {
 }
 
 @media (min-width: 768px) {
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-railSettings {
+  body[data-islands-ui] .isl-railSettings {
     position: fixed;
     left: calc(var(--isl-gap) + (var(--isl-rail-width) - 36px) / 2);
     bottom: 56px;

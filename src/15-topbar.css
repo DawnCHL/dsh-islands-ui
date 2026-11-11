@@ -12,7 +12,7 @@
 
 body[data-islands-ui] .isl-topbar {
   position: fixed;
-  inset: 0 0 auto;
+  inset: var(--isl-chrome-top) 0 auto;
   z-index: 30;
   box-sizing: border-box;
   display: flex;
@@ -21,7 +21,7 @@ body[data-islands-ui] .isl-topbar {
   height: var(--isl-topbar-height);
   /* macOS centers the traffic lights in its 48px window-chrome band; the
      controls follow that center (10 + 14 = 24), not the 40px bar's own. */
-  padding: 10px 10px 0 88px;
+  padding: 10px 10px 0 8px;
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
   font-size: 13px;
@@ -35,9 +35,19 @@ body[data-islands-ui] .isl-topbar {
 
 /* Left lead (traffic-light strip) and the centre of the bar are draggable;
    both stop short of the docked controls so clicks keep working. */
+/* The 88px lead exists only for the macOS traffic lights. */
 body[data-islands-ui] .isl-topbarLead {
+  display: none;
+}
+
+html[data-platform='darwin'] body[data-islands-ui] .isl-topbar {
+  padding-left: 88px;
+}
+
+html[data-platform='darwin'] body[data-islands-ui] .isl-topbarLead {
   position: absolute;
   inset: 0 auto 0 0;
+  display: block;
   width: 88px;
   pointer-events: auto;
   -webkit-app-region: drag;

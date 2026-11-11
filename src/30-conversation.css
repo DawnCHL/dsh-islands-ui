@@ -91,9 +91,9 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
    with the workspace toggle on the left.
    ========================================================================== */
 @media (min-width: 768px) {
-  html:not([data-windows-titlebar]) body[data-islands-ui] .kiGsTW_headerUtilities {
+  body[data-islands-ui] .kiGsTW_headerUtilities {
     position: fixed;
-    top: 10px;
+    top: calc(var(--isl-chrome-top) + 10px);
     right: 41px; /* frame gap 5 + corner 28 + gap 8 */
     z-index: 31;
     height: 28px;
@@ -101,9 +101,9 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
     align-items: center;
   }
 
-  html:not([data-windows-titlebar]) body[data-islands-ui] .kiGsTW_headerCorner {
+  body[data-islands-ui] .kiGsTW_headerCorner {
     position: fixed;
-    top: 10px;
+    top: calc(var(--isl-chrome-top) + 10px);
     right: var(--isl-gap);
     z-index: 31;
     height: 28px;
@@ -119,9 +119,9 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
    instead, and closes through the native collapse action.
    ========================================================================== */
 @media (min-width: 768px) {
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle {
+  body[data-islands-ui] .isl-rightToggle {
     position: fixed;
-    top: 10px;
+    top: calc(var(--isl-chrome-top) + 10px);
     right: var(--isl-gap);
     z-index: 32;
     box-sizing: border-box;
@@ -139,23 +139,23 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
     -webkit-app-region: no-drag;
   }
 
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle:hover,
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle[aria-pressed='true'] {
+  body[data-islands-ui] .isl-rightToggle:hover,
+  body[data-islands-ui] .isl-rightToggle[aria-pressed='true'] {
     background: var(--isl-hover);
     color: var(--dsw-alias-label-primary);
   }
 
-  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle:focus-visible {
+  body[data-islands-ui] .isl-rightToggle:focus-visible {
     outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
     outline-offset: -2px;
   }
 
   /* The top bar owns open and close; the island's own expand/collapse
      controls would duplicate it. */
-  html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-expand],
-  html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-toggle],
+  body[data-islands-ui] [data-sidebar-right-expand],
+  body[data-islands-ui] [data-sidebar-right-toggle],
   /* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
-  html:not([data-windows-titlebar]) body[data-islands-ui] ._5KEEsG_headerSide {
+  body[data-islands-ui] ._5KEEsG_headerSide {
     display: none !important;
   }
 }

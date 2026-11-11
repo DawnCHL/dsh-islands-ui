@@ -249,7 +249,7 @@ body[data-islands-ui] .kB3qhq_collapsed .kB3qhq_newSession {
 @media (min-width: 768px) {
   /* The window top bar owns the collapse control while the workspace is open;
      the in-island toggle would duplicate it. */
-  html:not([data-windows-titlebar]) body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_toggle {
+  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_toggle {
     display: none;
   }
 
@@ -333,8 +333,8 @@ body[data-islands-ui][data-islands-workspace-collapsed] .kB3qhq_root:not(.kB3qhq
 
 /* ---- Custom rail replaces the shipped brand + panel icon column ---------- */
 @media (min-width: 768px) {
-  html:not([data-windows-titlebar]) body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_logoRow,
-  html:not([data-windows-titlebar]) body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelList {
+  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_logoRow,
+  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelList {
     display: none !important;
   }
 }

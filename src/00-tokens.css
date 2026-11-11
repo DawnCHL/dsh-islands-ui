@@ -28,6 +28,8 @@ body[data-islands-ui] {
   --isl-radius-sm: 8px;
   --isl-gap: 5px;
   --isl-topbar-height: 40px;
+  /* Extra chrome above the app top bar (the Windows title bar). */
+  --isl-chrome-top: 0px;
   --isl-rail-collapsed-width: 56px;
   --isl-rail-width: 48px;
   /* Elevation: a hairline ring plus one soft, deep shadow. */
@@ -148,6 +150,11 @@ body[data-islands-ui][data-ds-dark-theme] * {
   --dsw-shadow-lv1: 0 2px 6px rgba(0, 0, 0, 0.35);
   --dsw-shadow-lv2: 0 6px 16px rgba(0, 0, 0, 0.4);
   --dsw-shadow-lv3: 0 0 1px rgba(0, 0, 0, 0.6), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* Windows keeps its native title bar above the app top bar. */
+html[data-windows-titlebar] body[data-islands-ui] {
+  --isl-chrome-top: var(--dsh-windows-titlebar-height, 32px);
 }
 
 /* User-selected accent: remap the business tokens everywhere. */
