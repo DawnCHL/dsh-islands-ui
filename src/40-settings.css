@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Islands UI · 40 settings (and shared dialog surfaces)
+   The settings window is an island; its navigation is a recessed island.
+   ========================================================================== */
+
+body[data-islands-ui] ._77Pn0W_overlay {
+  background: transparent;
+}
+
+body[data-islands-ui] ._77Pn0W_mask {
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: var(--dsw-mask-blur);
+}
+
+body[data-islands-ui] ._77Pn0W_panel {
+  width: 860px;
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: 24px;
+  box-shadow: var(--isl-shadow-float);
+  padding: 10px;
+  gap: 8px;
+  grid-template-columns: 188px minmax(0, 1fr);
+}
+
+body[data-islands-ui] ._77Pn0W_navTitle {
+  padding: 12px 8px 4px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+body[data-islands-ui] ._77Pn0W_nav {
+  padding: 8px;
+  background: var(--isl-surface-muted);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+}
+
+body[data-islands-ui] ._77Pn0W_navList {
+  gap: 2px;
+}
+
+body[data-islands-ui] ._77Pn0W_navCell {
+  height: 36px;
+  padding: 8px 10px;
+  border-radius: var(--isl-radius-md);
+  color: var(--dsw-alias-label-secondary);
+}
+
+body[data-islands-ui] ._77Pn0W_navCell:hover {
+  background: var(--isl-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-islands-ui] ._77Pn0W_navCell._77Pn0W_active {
+  background: var(--isl-surface);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+  box-shadow: 0 0 0 1px var(--isl-border-soft), 0 1px 2px rgba(17, 24, 39, 0.05);
+}
+
+body[data-islands-ui] ._77Pn0W_header {
+  height: 48px;
+  padding: 6px 6px 0 8px;
+}
+
+body[data-islands-ui] ._77Pn0W_options {
+  padding: 0 16px 20px 6px;
+}
+
+body[data-islands-ui] ._77Pn0W_close {
+  border-radius: var(--isl-radius-sm);
+}
+
+/* Settings cards (models, account, plugins) become nested islands. */
+body[data-islands-ui] ._77Pn0W_options [class*='_card'] {
+  border-radius: var(--isl-radius-lg);
+}
+
+body[data-islands-ui] ._77Pn0W_options [class*='_section'] {
+  border-radius: var(--isl-radius-md);
+}
+
+/* The general-page rows keep their separators but at island quietness. */
+body[data-islands-ui] [data-slot='settings.general.item'] > * {
+  border-bottom-color: var(--isl-border-soft);
+}
+
+body[data-islands-ui] [data-slot='settings.general.item']:last-child > * {
+  border-bottom: 0;
+}
+
+/* Dialogs opened from settings (confirmations, pickers). */
+body[data-islands-ui] [role='dialog'] {
+  border-radius: var(--isl-radius-xl);
+}
+
+/* Account page hero cards. */
+body[data-islands-ui] .XGmX4q_card {
+  border-radius: var(--isl-radius-lg);
+}
+
+body[data-islands-ui] ._7lc4_a_balanceCard {
+  border-radius: var(--isl-radius-lg);
+  border: 1px solid var(--isl-border-soft);
+  background: var(--isl-surface-muted);
+}

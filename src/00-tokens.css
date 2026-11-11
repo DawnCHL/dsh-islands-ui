@@ -1,0 +1,158 @@
+/* ==========================================================================
+   Islands UI · 00 tokens
+   One source of truth for the skin. Every rule below reads these variables,
+   so light/dark, radius, elevation and spacing are changed in one place.
+   `--dsw-*` aliases are re-pointed at the Islands scale so shipped components
+   inherit the new language without per-component overrides.
+   ========================================================================== */
+
+body[data-islands-ui] {
+  /* Canvas: the unified background all islands float on. */
+  --isl-canvas: #f7f7f7;
+  --isl-canvas-veil: rgba(232, 234, 239, 0.72);
+  /* Island surfaces. */
+  --isl-surface: #ffffff;
+  --isl-surface-muted: #f3f5f8;
+  --isl-surface-sunken: #eceef3;
+  /* Hairlines: Islands uses tinted, very quiet borders. */
+  --isl-border-soft: rgba(17, 24, 39, 0.06);
+  --isl-border: rgba(17, 24, 39, 0.09);
+  --isl-border-strong: rgba(17, 24, 39, 0.14);
+  --isl-hover: rgba(17, 24, 39, 0.055);
+  --isl-active: rgba(17, 24, 39, 0.09);
+  /* Geometry. */
+  --isl-radius-xl: 20px;
+  --isl-radius-lg: 16px;
+  --isl-radius-md: 12px;
+  --isl-radius-sm: 8px;
+  --isl-gap: 5px;
+  --isl-topbar-height: 40px;
+  --isl-rail-collapsed-width: 56px;
+  --isl-rail-width: 48px;
+  /* Elevation: a hairline ring plus one soft, deep shadow. */
+  --isl-shadow-island: none;
+  --isl-shadow-float:
+    0 0 0 1px rgba(17, 24, 39, 0.05), 0 10px 24px -10px rgba(17, 24, 39, 0.14),
+    0 28px 64px -32px rgba(17, 24, 39, 0.3);
+
+  /* ---- DSH alias layer -------------------------------------------------- */
+  --dsw-alias-bg-base: var(--isl-surface);
+  --dsw-alias-bg-layer-1: var(--isl-surface);
+  --dsw-alias-bg-layer-2: var(--isl-surface);
+  --dsw-alias-bg-layer-3: var(--isl-surface-muted);
+  --dsw-alias-bg-overlay: var(--isl-surface);
+  --dsw-alias-bg-module-platform: var(--isl-surface-muted);
+  --dsw-alias-bg-multi-select: var(--isl-surface-muted);
+  --dsw-alias-bg-skeleton: rgba(17, 24, 39, 0.06);
+  --dsw-specific-sidebar-fill: var(--isl-surface);
+  --dsw-specific-input-major: var(--isl-surface);
+  --dsw-specific-selector: var(--isl-surface-muted);
+  --dsw-specific-tip: var(--isl-surface-muted);
+  --dsw-specific-bubble: var(--isl-surface-muted);
+  --dsw-specific-bubble-highlight: #eef1f6;
+  --dsw-specific-sidebar-nav-item-active: var(--isl-surface-muted);
+  --dsw-specific-sidebar-nav-item-active-accent: color-mix(
+    in srgb,
+    var(--dsw-alias-state-business-primary) 16%,
+    transparent
+  );
+  --dsw-specific-menu: color-mix(in srgb, var(--isl-surface) 90%, transparent);
+  --dsw-alias-menu-group-header-fill: color-mix(in srgb, var(--isl-surface-muted) 92%, transparent);
+  --dsw-alias-markdown-code-block: var(--isl-surface-muted);
+  --dsw-alias-markdown-code-block-banner: var(--isl-surface-muted);
+  --dsw-alias-markdown-inline-code: var(--isl-surface-muted);
+  --dsw-alias-markdown-tag: var(--isl-surface-muted);
+  --dsw-alias-settings-card-fill: color-mix(in srgb, var(--isl-surface-muted) 68%, var(--isl-surface));
+  --dsw-alias-settings-card-stroke: var(--isl-border-soft);
+  --dsw-alias-border-l1: var(--isl-border-soft);
+  --dsw-alias-border-l2: var(--isl-border-soft);
+  --dsw-alias-border-l3: var(--isl-border);
+  --dsw-alias-border-l4: var(--isl-border-strong);
+  --dsw-alias-interactive-bg-hover: var(--isl-hover);
+  --dsw-alias-interactive-bg-active: var(--isl-active);
+  --dsw-alias-interactive-bg-hover-solid: var(--isl-surface-muted);
+  --dsw-alias-button-elevated-fill: var(--isl-surface);
+  --dsw-alias-button-floating-fill: var(--isl-surface);
+  --dsw-alias-button-floating-hover: var(--isl-surface-muted);
+  --dsw-radius-xs: 6px;
+  --dsw-radius-sm: 8px;
+  --dsw-radius-md: 10px;
+  --dsw-radius-lg: 14px;
+  --dsw-radius-xl: 18px;
+  --dsw-radius-panel: 20px;
+  --dsw-menu-backdrop-filter: blur(18px) saturate(140%);
+  --dsw-mask-blur: blur(3px);
+  --dsw-alias-bg-mask-1: rgba(107, 114, 128, 0.3);
+  --dsw-alias-bg-mask-2: rgba(107, 114, 128, 0.18);
+
+  background-color: var(--isl-canvas) !important;
+}
+
+/* Elevation tokens are declared on `body, body *` by the shipped theme, so the
+   override has to be declared on descendants too, not only on body. */
+body[data-islands-ui] * {
+  --dsw-elevation-stroke-color: var(--isl-border);
+  --dsw-elevation-stroke: 0 0 0 0.5px var(--isl-border);
+  --dsw-elevation-soft:
+    0 0 0 0.5px var(--isl-border), 0 6px 16px -6px rgba(17, 24, 39, 0.1),
+    0 18px 40px -24px rgba(17, 24, 39, 0.24);
+  --dsw-elevation-panel:
+    0 0 0 0.5px var(--isl-border), 0 8px 20px -8px rgba(17, 24, 39, 0.12),
+    0 24px 48px -28px rgba(17, 24, 39, 0.24);
+  --dsw-elevation-prominent:
+    0 0 0 0.5px var(--isl-border), 0 12px 28px -10px rgba(17, 24, 39, 0.16),
+    0 32px 64px -32px rgba(17, 24, 39, 0.3);
+  --dsw-shadow-lv1: 0 2px 4px rgba(17, 24, 39, 0.05);
+  --dsw-shadow-lv2: 0 4px 12px rgba(17, 24, 39, 0.06), 0 2px 8px rgba(17, 24, 39, 0.04);
+  --dsw-shadow-lv3:
+    0 0 1px rgba(17, 24, 39, 0.2), 0 12px 32px rgba(17, 24, 39, 0.08);
+}
+
+/* ---- Dark --------------------------------------------------------------- */
+body[data-islands-ui][data-ds-dark-theme] {
+  --isl-canvas: #0f1012;
+  --isl-canvas-veil: rgba(15, 16, 18, 0.72);
+  --isl-surface: #1b1c1f;
+  --isl-surface-muted: #232428;
+  --isl-surface-sunken: #151619;
+  --isl-border-soft: rgba(255, 255, 255, 0.06);
+  --isl-border: rgba(255, 255, 255, 0.09);
+  --isl-border-strong: rgba(255, 255, 255, 0.16);
+  --isl-hover: rgba(255, 255, 255, 0.06);
+  --isl-active: rgba(255, 255, 255, 0.1);
+  --isl-shadow-island: none;
+  --isl-shadow-float:
+    0 0 0 1px rgba(0, 0, 0, 0.55), 0 12px 28px -12px rgba(0, 0, 0, 0.6),
+    0 32px 72px -36px rgba(0, 0, 0, 0.85);
+
+  --dsw-alias-bg-skeleton: rgba(255, 255, 255, 0.07);
+  --dsw-specific-bubble-highlight: #2a2c31;
+  --dsw-specific-menu: color-mix(in srgb, var(--isl-surface) 88%, transparent);
+  --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.55);
+  --dsw-alias-bg-mask-2: rgba(0, 0, 0, 0.32);
+}
+
+body[data-islands-ui][data-ds-dark-theme] * {
+  --dsw-elevation-stroke-color: var(--isl-border);
+  --dsw-elevation-stroke: 0 0 0 0.5px var(--isl-border);
+  --dsw-elevation-soft:
+    0 0 0 0.5px var(--isl-border), 0 8px 20px -8px rgba(0, 0, 0, 0.55),
+    0 20px 44px -24px rgba(0, 0, 0, 0.7);
+  --dsw-elevation-panel:
+    0 0 0 0.5px var(--isl-border), 0 10px 24px -10px rgba(0, 0, 0, 0.55),
+    0 28px 56px -30px rgba(0, 0, 0, 0.75);
+  --dsw-elevation-prominent:
+    0 0 0 0.5px var(--isl-border), 0 14px 32px -12px rgba(0, 0, 0, 0.6),
+    0 36px 72px -36px rgba(0, 0, 0, 0.85);
+  --dsw-shadow-lv1: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --dsw-shadow-lv2: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --dsw-shadow-lv3: 0 0 1px rgba(0, 0, 0, 0.6), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* macOS ships a tinted, translucent sidebar. Islands wants an opaque canvas
+   instead, so the tint is replaced everywhere it is declared. */
+html[data-platform='darwin'] body[data-islands-ui],
+html[data-platform='darwin'] body[data-islands-ui][data-ds-dark-theme] {
+  --dsw-specific-menu: color-mix(in srgb, var(--isl-surface) 88%, transparent);
+  --dsw-alias-menu-group-header-fill: color-mix(in srgb, var(--isl-surface-muted) 94%, transparent);
+}
