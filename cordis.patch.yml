@@ -1,0 +1,4 @@
+# dsh-islands-ui bundle patch: one host row; the browser half ships in ./client.js.
+- insert:
+    - id: islands-ui
+      name: '@local/dsh-islands-ui'

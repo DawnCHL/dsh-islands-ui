@@ -1,0 +1,332 @@
+/* ==========================================================================
+   Islands UI · 20 sidebar
+   The expanded sidebar is one full-height island: a persistent icon rail on
+   the left and the workspace browser on the same surface. The island spans the
+   exact same top and bottom edges as the conversation island. Collapsed mode
+   keeps the shipped rail untouched.
+   ========================================================================== */
+
+body[data-islands-ui] .kB3qhq_root {
+  background: transparent;
+}
+
+/* ---- Expanded: chrome rail + workspace island --------------------------- */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) {
+  display: grid;
+  grid-template-columns: var(--isl-rail-width) minmax(0, 1fr);
+  grid-template-rows: var(--isl-gap) auto minmax(0, 1fr) auto;
+  column-gap: var(--isl-gap);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+/* The workspace browser is the sidebar's only island. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed)::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 calc(var(--isl-rail-width) + var(--isl-gap));
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+  box-shadow: var(--isl-shadow-island);
+  pointer-events: none;
+}
+
+/* The top band is a small breathing gap inside the sidebar column. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_topStrip {
+  grid-area: 1 / 1 / 2 / -1;
+  height: 100%;
+  margin: 0;
+  padding: 0 4px 0 0;
+  justify-content: flex-end;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_logoRow {
+  grid-area: 2 / 1;
+  height: 36px;
+  margin: 0 0 6px;
+  padding: 0;
+  justify-content: center;
+  overflow: visible;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_brand {
+  justify-content: center;
+  overflow: visible;
+}
+
+/* The brand wordmark and build stamp belong to window chrome, not the rail. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_brandName,
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_localBuildBrand {
+  display: none;
+}
+
+body[data-islands-ui] .kB3qhq_brandMark {
+  width: 28px;
+  height: 28px;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_newSession {
+  grid-area: 2 / 2;
+  height: 36px;
+  margin: 0 6px 6px;
+  padding: 0 8px;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: var(--isl-radius-md);
+  background: transparent;
+  box-shadow: none;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 400;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_newSessionContent {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_newSession:hover {
+  background: var(--isl-hover);
+}
+
+/* The global panel list becomes the rail's primary navigation. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelList {
+  grid-area: 3 / 1;
+  align-self: start;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 0;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelRow {
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--isl-radius-md);
+  background-clip: border-box;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelRow.kB3qhq_panelActive {
+  background: var(--dsw-specific-sidebar-nav-item-active-accent);
+  color: var(--dsw-alias-state-business-primary);
+}
+
+/* The label leaves the visual rail but stays in the accessibility tree. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---- Workspace browser: same surface, full height ----------------------- */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_regionArea {
+  grid-area: 3 / 2 / 5 / 3;
+  margin: 0;
+  padding: 0 4px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body[data-islands-ui] .kB3qhq_regionArea {
+  --dsh-session-list-edge-inset: 4px;
+}
+
+body[data-islands-ui] .Kjh-qa_sectionHeader {
+  padding-inline: 8px;
+  margin-right: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+body[data-islands-ui] .Kjh-qa_sectionLabel {
+  font-weight: 500;
+}
+
+body[data-islands-ui] .Kjh-qa_list {
+  padding-bottom: 8px;
+}
+
+body[data-islands-ui] .Kjh-qa_fade {
+  background: linear-gradient(to bottom, transparent, var(--isl-surface));
+}
+
+body[data-islands-ui] .JoiKIa_sessionRow,
+body[data-islands-ui] .JoiKIa_projectRow {
+  border-radius: var(--isl-radius-sm);
+  padding-inline: 8px;
+}
+
+/* ---- Rail foot: settings gear ------------------------------------------ */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea {
+  grid-area: 4 / 1;
+  align-items: center;
+  margin-top: 6px;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_settingsArea,
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footerActions {
+  width: auto;
+  align-items: center;
+  justify-content: center;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) ._77Pn0W_triggerRow {
+  width: 36px;
+  margin: 4px 0 2px;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) ._77Pn0W_trigger {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+  border-inline: 0;
+  border-radius: var(--isl-radius-md);
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) ._77Pn0W_triggerLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) ._77Pn0W_trigger:hover,
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) ._77Pn0W_trigger[aria-expanded='true'] {
+  background: var(--isl-hover);
+}
+
+/* Footer actions contributed next to Settings (account launcher, etc.). */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footerActions button {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--isl-radius-md);
+}
+
+/* ---- Collapsed rail ------------------------------------------------------ */
+/* Collapsing hides the workspace browser only; the rail keeps its own island. */
+body[data-islands-ui] .kB3qhq_root.kB3qhq_collapsed {
+  /* The rail is chrome, not an island: it sits directly on the ocean. */
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 8px 10px 6px;
+  overflow: hidden;
+}
+
+body[data-islands-ui] .kB3qhq_root.kB3qhq_collapsed .kB3qhq_topStrip {
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+body[data-islands-ui] .kB3qhq_collapsed .kB3qhq_newSession {
+  border-radius: var(--isl-radius-md);
+}
+
+@media (min-width: 768px) {
+  /* The window top bar owns the collapse control while the workspace is open;
+     the in-island toggle would duplicate it. */
+  html:not([data-windows-titlebar]) body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_toggle {
+    display: none;
+  }
+
+  /* On macOS the shipped frame gives a collapsed sidebar zero width, hiding
+     the rail too. Restore one rail-wide track (right panel still closed). */
+  [data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame[data-sidebar-collapsed][data-rightbar-collapsed] {
+    grid-template-columns: var(--isl-rail-collapsed-width) minmax(0, 1fr) 0 !important;
+  }
+
+  /* The rail itself is the expand control; do not reserve header space for the
+     floating seat and do not show a second expand button over the island. */
+  [data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame[data-sidebar-collapsed] {
+    --dsh-frame-leading-clearance: 0px;
+  }
+
+  html:not([data-windows-titlebar]) body[data-islands-ui] .PIRFFq_leadingSeat {
+    display: none;
+  }
+}
+
+/* ---- Search / section chrome inside the island --------------------------- */
+body[data-islands-ui] .Kjh-qa_searchExpanded {
+  border-color: var(--isl-border-soft);
+  background: var(--isl-surface-muted);
+  border-radius: var(--isl-radius-sm);
+}
+
+body[data-islands-ui] .Kjh-qa_searchExpanded .Kjh-qa_searchButton:hover {
+  background: transparent;
+}
+
+/* ---- Narrow drawer ------------------------------------------------------- */
+body[data-islands-ui] .PIRFFq_frame[data-sidebar-drawer] .PIRFFq_sidebarCol {
+  background: var(--isl-canvas);
+  border-right: 1px solid var(--isl-border-soft);
+  box-shadow: var(--isl-shadow-float);
+}
+
+/* ---- Account launcher (settings.launcher) --------------------------------
+   In this build the sidebar foot is the account menu rather than the bare
+   settings gear, so the same rail geometry applies to its trigger. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_root {
+  flex: none;
+  width: 36px;
+  margin-inline: 0;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_anchor {
+  width: 36px;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_trigger,
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_trigger[data-signed-out='false']:not([data-collapsed='true']),
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_trigger[data-signed-out='true']:not([data-collapsed='true']) {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  border-inline: 0;
+  border-radius: var(--isl-radius-md);
+  background-clip: border-box;
+}
+
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_footArea .hjANda_label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---- Independent workspace collapse ------------------------------------- */
+/* Hide the workspace island only; the rail keeps its expanded-layout DOM and
+   position, so nothing in the left column is re-rendered by the toggle. */
+body[data-islands-ui][data-islands-workspace-collapsed] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_newSession,
+body[data-islands-ui][data-islands-workspace-collapsed] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_regionArea,
+body[data-islands-ui][data-islands-workspace-collapsed] .kB3qhq_root:not(.kB3qhq_collapsed)::after {
+  display: none !important;
+}

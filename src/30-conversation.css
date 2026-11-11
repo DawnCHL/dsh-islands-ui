@@ -1,0 +1,161 @@
+/* ==========================================================================
+   Islands UI · 30 conversation & composer
+   ========================================================================== */
+
+body[data-islands-ui] .kiGsTW_root {
+  background: transparent;
+}
+
+body[data-islands-ui] .kiGsTW_header {
+  border-bottom-color: var(--isl-border-soft);
+}
+
+body[data-islands-ui] .kiGsTW_headerBlank {
+  border-bottom-color: transparent;
+}
+
+body[data-islands-ui] .kiGsTW_scrollBody {
+  margin-right: 0;
+}
+
+/* Composer: the one element that should visibly float above the island. */
+body[data-islands-ui] .JZLxKW_card {
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  box-shadow: none;
+}
+
+body[data-islands-ui] .JZLxKW_cardWorkspaceTrigger:after {
+  border-radius: var(--dsw-radius-panel);
+  color: var(--isl-border-strong);
+}
+
+body[data-islands-ui] .JZLxKW_notice {
+  border-radius: var(--isl-radius-md);
+  background: var(--isl-surface-muted);
+}
+
+/* Sticky composer seat fades into the island surface, not into a raw token. */
+body[data-islands-ui] .kiGsTW_root[data-phase='active'] .kiGsTW_composerSeat,
+body[data-islands-ui] .kiGsTW_embeddedBody[data-content-phase='active'] .kiGsTW_composerSeat {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--isl-surface) 0%, transparent) 0px,
+    var(--isl-surface) 36px
+  );
+}
+
+/* Hero: a calmer, slightly tighter headline on the open island. */
+body[data-islands-ui] ._8tPydW_headline {
+  letter-spacing: -0.01em;
+}
+
+body[data-islands-ui] ._8tPydW_workspace {
+  border-radius: 999px;
+  background: var(--isl-surface-muted);
+}
+
+body[data-islands-ui] ._8tPydW_workspace:hover {
+  background: var(--isl-hover);
+}
+
+/* Tool / turn cards keep their own hierarchy but gain island hairlines. */
+body[data-islands-ui] .CuF05a_root {
+  border-color: var(--isl-border-soft);
+  background: var(--isl-surface-muted);
+}
+
+body[data-islands-ui] .CuF05a_root:hover {
+  background: var(--isl-surface-sunken);
+}
+
+/* Header chips and breadcrumbs. */
+body[data-islands-ui] .kiGsTW_crumb {
+  border-radius: var(--isl-radius-sm);
+}
+
+/* View tabs sit on the island as a quiet segmented row. */
+body[data-islands-ui] .kiGsTW_viewTabs {
+  gap: 22px;
+}
+
+body[data-islands-ui] .kiGsTW_tabActive:after {
+  border-radius: 999px;
+  height: 2px;
+}
+
+/* ==========================================================================
+   Header utilities live in the window bar
+   The three trailing controls (session tools, side panel, right panel) leave
+   the conversation island and dock at the bar's right edge, vertically aligned
+   with the workspace toggle on the left.
+   ========================================================================== */
+@media (min-width: 768px) {
+  html:not([data-windows-titlebar]) body[data-islands-ui] .kiGsTW_headerUtilities {
+    position: fixed;
+    top: 10px;
+    right: 41px; /* frame gap 5 + corner 28 + gap 8 */
+    z-index: 31;
+    height: 28px;
+    margin: 0;
+    align-items: center;
+  }
+
+  html:not([data-windows-titlebar]) body[data-islands-ui] .kiGsTW_headerCorner {
+    position: fixed;
+    top: 10px;
+    right: var(--isl-gap);
+    z-index: 31;
+    height: 28px;
+    margin: 0;
+    align-items: center;
+  }
+}
+
+/* ==========================================================================
+   Always-visible right sidebar toggle
+   The native header button unmounts while the panel is open and the panel
+   carries its own collapse control. The top bar owns one persistent toggle
+   instead, and closes through the native collapse action.
+   ========================================================================== */
+@media (min-width: 768px) {
+  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle {
+    position: fixed;
+    top: 10px;
+    right: var(--isl-gap);
+    z-index: 32;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--isl-radius-sm);
+    background: transparent;
+    color: var(--dsw-alias-label-secondary);
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-app-region: no-drag;
+  }
+
+  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle:hover,
+  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle[aria-pressed='true'] {
+    background: var(--isl-hover);
+    color: var(--dsw-alias-label-primary);
+  }
+
+  html:not([data-windows-titlebar]) body[data-islands-ui] .isl-rightToggle:focus-visible {
+    outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+    outline-offset: -2px;
+  }
+
+  /* The top bar owns open and close; the island's own expand/collapse
+     controls would duplicate it. */
+  html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-expand],
+  html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-toggle],
+  /* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
+  html:not([data-windows-titlebar]) body[data-islands-ui] ._5KEEsG_headerSide {
+    display: none !important;
+  }
+}

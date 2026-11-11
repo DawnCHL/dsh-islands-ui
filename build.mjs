@@ -1,0 +1,33 @@
+/**
+ * Build the self-contained browser module.
+ *
+ * The module loader cannot import package files, so every src/*.css file is
+ * concatenated (in filename order) and inlined into client.js. Run with
+ * `node build.mjs` after editing the styles.
+ */
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = dirname(fileURLToPath(import.meta.url));
+const srcDir = join(root, 'src');
+
+const entries = await readdir(srcDir, { withFileTypes: true });
+const files = entries
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.css'))
+  .map((entry) => entry.name)
+  .sort();
+
+const parts = [];
+for (const name of files) {
+  const text = await readFile(join(srcDir, name), 'utf8');
+  parts.push(`/* ---- ${name} ---- */\n${text.trim()}`);
+}
+
+const css = parts.join('\n\n');
+const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
+if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
+const built = template.replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
+
+await writeFile(join(root, 'client.js'), built, 'utf8');
+console.log(`client.js: ${files.length} stylesheets, ${css.length} bytes of CSS`);

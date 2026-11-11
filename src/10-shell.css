@@ -1,0 +1,172 @@
+/* ==========================================================================
+   Islands UI · 10 shell
+   The frame becomes a canvas; the three columns become detachable islands.
+   ========================================================================== */
+
+body[data-islands-ui] .PIRFFq_frame {
+  /* The ocean is a solid surface, never the desktop showing through vibrancy. */
+  background: var(--isl-canvas);
+  padding: calc(var(--isl-topbar-height) + var(--isl-gap)) var(--isl-gap) var(--isl-gap);
+  /* Column gap only: the empty bottom track must not steal an extra row gap,
+     so the islands stay symmetric top and bottom. */
+  gap: 0 var(--isl-gap);
+}
+
+/* A real bottom panel (terminal, banner) still gets breathing room. */
+body[data-islands-ui] .PIRFFq_bottomRow:has([data-slot='shell.bottom'] > *) {
+  margin-top: var(--isl-gap);
+}
+
+/* The closed right column is a zero-width track, but the grid still reserves a
+   gap beside it; pull the centre island over that gap so the canvas margin on
+   the right equals the margin on the left. */
+body[data-islands-ui] .PIRFFq_frame[data-rightbar-collapsed] .PIRFFq_centerCol {
+  margin-right: calc(-1 * var(--isl-gap));
+}
+
+/* Center column: the conversation island. */
+body[data-islands-ui] .PIRFFq_centerCol {
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+  box-shadow: var(--isl-shadow-island);
+  overflow: hidden;
+}
+
+/* Shipped desktop rules paint the sidebar with a gradient and give the center
+   column a left hairline; both are removed so the canvas reads as one plane. */
+[data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame {
+  background: var(--isl-canvas);
+}
+
+[data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame:not([data-sidebar-drawer]) .PIRFFq_sidebarCol {
+  background: transparent;
+  border-right: 0;
+  backdrop-filter: none;
+}
+
+body[data-islands-ui] .PIRFFq_sidebarCol {
+  background: transparent;
+  border-right: 0;
+}
+
+[data-platform='darwin'] body[data-islands-ui] .PIRFFq_centerCol,
+body[data-islands-ui] .PIRFFq_centerCol {
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-left: 1px solid var(--isl-border-soft);
+}
+
+body[data-islands-ui] .PIRFFq_mainPanel {
+  background: transparent;
+}
+
+/* Right workbench: only while a pane is open does the column render an island. */
+body[data-islands-ui] .PIRFFq_rightbarCol {
+  background: transparent;
+}
+
+body[data-islands-ui] .Dv5QdW_panel[data-sidebar-right-open]:not([data-sidebar-right-panel='fullscreen']) {
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+  box-shadow: var(--isl-shadow-island);
+  overflow: clip;
+}
+
+/* Drawer mask on narrow windows: Islands keeps the veil light and blurred. */
+body[data-islands-ui] .PIRFFq_drawerMask {
+  background: var(--dsw-alias-bg-mask-1);
+  backdrop-filter: var(--dsw-mask-blur);
+}
+
+/* The resize handle is invisible chrome; keep it grabbable but quiet. */
+body[data-islands-ui] .PIRFFq_handle {
+  width: 10px;
+  margin-left: -5px;
+}
+
+/* Windows title bar keeps its native height; the frame padding already gives
+   the rounded content corner room, so only the radius is unified. */
+[data-windows-titlebar] body[data-islands-ui] .PIRFFq_centerCol {
+  border-radius: var(--isl-radius-lg);
+}
+
+[data-windows-titlebar] body[data-islands-ui] .PIRFFq_frame {
+  padding-top: var(--dsh-windows-titlebar-height);
+  background: var(--isl-canvas);
+}
+
+/* Collapsed sidebar on macOS drops the center column's left hairline; the
+   island keeps its outline regardless. */
+[data-platform='darwin'] body[data-islands-ui] [data-sidebar-collapsed] .PIRFFq_centerCol {
+  border-left: 1px solid var(--isl-border-soft);
+}
+
+/* ==========================================================================
+   Workbench panels (better-sidebar bottom dock + native right sidebar)
+   Both must read as independent islands, not as sheets pasted onto the
+   conversation island.
+   ========================================================================== */
+
+/* The bottom workbench reserves its height on the conversation column, not on
+   the inner panel, so the island itself shrinks and a canvas gap opens between
+   the two islands. */
+body[data-islands-ui] #root [data-dsh-center-col] {
+  margin-bottom: 0;
+}
+
+body[data-islands-ui] .PIRFFq_centerCol {
+  margin-bottom: var(--dsh-sidebar-height, 0px);
+  transition: margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+body[data-islands-ui]:has([data-dsh-bottom-panel]:not([class*='Hidden'])) .PIRFFq_centerCol {
+  /* one gap above the panel and one below it */
+  margin-bottom: calc(var(--dsh-sidebar-height, 0px) + var(--isl-gap));
+}
+
+body[data-islands-ui] [data-dsh-bottom-panel] {
+  box-sizing: border-box;
+  /* Align the panel with the conversation island edges and let the frame
+     padding provide the bottom gap, so every island shares one gap width. */
+  margin: 0;
+  bottom: var(--isl-gap);
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+  box-shadow: none;
+  overflow: clip;
+}
+
+/* The native right sidebar keeps its own width preference, which can exceed
+   the track the frame grants; clamp it to the track so it never hangs over
+   the conversation island. */
+body[data-islands-ui] .Dv5QdW_panel[data-sidebar-right-open]:not([data-sidebar-right-panel='fullscreen']) {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-islands-ui] .PIRFFq_centerCol {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   Independent workspace collapse
+   The DSH collapse swaps the whole sidebar render tree for its rail-only
+   variant. Instead the expanded rail stays mounted and only the workspace
+   column hides, so the left column never re-renders or re-flows.
+   ========================================================================== */
+body[data-islands-ui][data-islands-workspace-collapsed] .PIRFFq_frame {
+  grid-template-columns:
+    var(--isl-rail-collapsed-width) minmax(0, 1fr)
+    var(--isl-rightbar-w, 0px) !important;
+}
+
+body[data-islands-ui] .PIRFFq_frame[data-islands-animating] {
+  transition: grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
