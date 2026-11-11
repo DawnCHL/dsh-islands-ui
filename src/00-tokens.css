@@ -20,6 +20,7 @@ body[data-islands-ui] {
   --isl-border-strong: rgba(17, 24, 39, 0.14);
   --isl-hover: rgba(17, 24, 39, 0.055);
   --isl-active: rgba(17, 24, 39, 0.09);
+  --isl-accent: #4176e6;
   /* Geometry. */
   --isl-radius-xl: 20px;
   --isl-radius-lg: 16px;
@@ -147,6 +148,13 @@ body[data-islands-ui][data-ds-dark-theme] * {
   --dsw-shadow-lv1: 0 2px 6px rgba(0, 0, 0, 0.35);
   --dsw-shadow-lv2: 0 6px 16px rgba(0, 0, 0, 0.4);
   --dsw-shadow-lv3: 0 0 1px rgba(0, 0, 0, 0.6), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* User-selected accent: remap the business tokens everywhere. */
+body[data-islands-ui][data-islands-accent],
+body[data-islands-ui][data-islands-accent] * {
+  --dsw-alias-state-business-primary: var(--isl-accent);
+  --dsw-alias-state-business-tertiary: color-mix(in srgb, var(--isl-accent) 16%, transparent);
 }
 
 /* macOS ships a tinted, translucent sidebar. Islands wants an opaque canvas
