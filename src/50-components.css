@@ -112,3 +112,106 @@ body[data-islands-ui] ::-webkit-scrollbar-thumb {
 body[data-islands-ui] :focus-visible {
   outline-offset: 1px;
 }
+
+/* ---- Dedicated settings page ------------------------------------------- */
+.isl-settingsPage {
+  box-sizing: border-box;
+  max-width: 760px;
+  padding: 4px 8px 24px;
+}
+
+.isl-settingsPageHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.isl-settingsPageLogo {
+  display: inline-flex;
+  flex: none;
+}
+
+.isl-settingsPageHeadText {
+  min-width: 0;
+}
+
+.isl-settingsPageTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.isl-settingsPageDesc {
+  margin-top: 4px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.isl-settingsPage .isl-prefRow:first-of-type {
+  margin-top: 12px;
+}
+
+.isl-accentPicker {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.isl-accentSwatch {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  background-clip: padding-box;
+  cursor: pointer;
+  transition:
+    transform 0.12s var(--ds-ease-in-out),
+    box-shadow 0.12s var(--ds-ease-in-out);
+}
+
+.isl-accentSwatch:hover {
+  transform: scale(1.08);
+}
+
+.isl-accentSwatch.is-selected {
+  box-shadow:
+    0 0 0 2px var(--dsw-alias-bg-base),
+    0 0 0 3.5px var(--dsw-alias-label-primary);
+}
+
+.isl-accentSwatch.is-default {
+  background: linear-gradient(135deg, #ffffff 0 47%, #c4c8ce 47% 53%, #1b1c1f 53% 100%);
+}
+
+.isl-accentCustom {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px dashed var(--dsw-alias-border-l3);
+  border-radius: 50%;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.isl-accentCustom::before {
+  content: '+';
+  font-size: 14px;
+  line-height: 1;
+}
+
+.isl-accentCustom input {
+  position: absolute;
+  inset: -4px;
+  width: 32px;
+  height: 32px;
+  opacity: 0;
+  cursor: pointer;
+}

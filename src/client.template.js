@@ -26,6 +26,23 @@ window.__ModuleLoader__.load({
         topbarToggle: '折叠或展开工作区',
         openRight: '打开侧边栏',
         closeRight: '关闭侧边栏',
+        workspace: '工作区',
+        pinned: '置顶',
+        untitled: '未命名会话',
+        locate: '定位到会话',
+        schedules: '自动化任务',
+        plugins: '插件',
+        settings: '设置',
+        more: '更多插件',
+        railTitle: '显示在左侧栏',
+        noExtras: '暂无其他插件',
+        pin: '固定到左侧栏',
+        enable: '启用 Islands 界面',
+        enableDesc: '关闭后立即恢复 DSH 默认外观，设置会保留。',
+        accent: '强调色',
+        accentDesc: '用于选中状态、滑块、发送按钮等。',
+        accentDefault: '跟随主题',
+        accentCustom: '自定义颜色',
         models: '选择模型',
         effort: '推理等级',
         back: '返回',
@@ -43,6 +60,23 @@ window.__ModuleLoader__.load({
         topbarToggle: 'Collapse or expand the workspace',
         openRight: 'Open side panel',
         closeRight: 'Close side panel',
+        workspace: 'Workspace',
+        pinned: 'Pinned',
+        untitled: 'Untitled session',
+        locate: 'Reveal in workspace',
+        schedules: 'Automation',
+        plugins: 'Plugins',
+        settings: 'Settings',
+        more: 'More plugins',
+        railTitle: 'Show in the left rail',
+        noExtras: 'No other plugins',
+        pin: 'Pin to the left rail',
+        enable: 'Enable Islands UI',
+        enableDesc: 'Turn off to restore the default appearance immediately; your settings are kept.',
+        accent: 'Accent color',
+        accentDesc: 'Used for selected states, sliders, the send button and more.',
+        accentDefault: 'Follow theme',
+        accentCustom: 'Custom color',
         models: 'Select model',
         effort: 'Reasoning',
         back: 'Back',
@@ -57,7 +91,15 @@ window.__ModuleLoader__.load({
 
     let localeService;
     let layoutService;
+    let slotsService;
+    let shortcutsService;
+    let uiWorkspaceService;
+    let workspacesService;
     let modelDirectories;
+    const RAIL_PIN_KEY = 'dsh-islands-ui:rail-pins';
+    const ACCENT_KEY = 'dsh-islands-ui:accent';
+    const DEFAULT_ACCENT = '#4176e6';
+    const ACCENT_PRESETS = ['#4176e6', '#7c5cff', '#1f9d63', '#e07a2e', '#d94f8a', '#d64545'];
     const listeners = new Set();
 
     function readStored() {
@@ -98,8 +140,59 @@ window.__ModuleLoader__.load({
       for (const listener of listeners) listener();
     }
 
+    function shortcutKeys(id, fallback = '') {
+      try {
+        const row = shortcutsService?.catalog?.getSnapshot?.().find((value) => value.id === id);
+        const keys = row?.keys;
+        if (Array.isArray(keys) && keys.length > 0) {
+          const mac =
+            document.documentElement.getAttribute('data-platform') === 'darwin' ||
+            /Mac/i.test(navigator.platform ?? '');
+          return keys.join(mac ? '' : '+');
+        }
+      } catch {
+        /* ignore */
+      }
+      return fallback;
+    }
+
+    function withShortcut(label, id, fallback = '') {
+      const keys = shortcutKeys(id, fallback);
+      return keys === '' ? label : `${label} (${keys})`;
+    }
+
     function useEnabled() {
       return React.useSyncExternalStore(subscribe, getSnapshot);
+    }
+
+    function readAccent() {
+      try {
+        const stored = window.localStorage.getItem(ACCENT_KEY);
+        return stored !== null && /^#[0-9a-f]{6}$/iu.test(stored) ? stored : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function applyAccent(color) {
+      const body = document.body;
+      if (body === null) return;
+      if (color === null) {
+        body.removeAttribute('data-islands-accent');
+        body.style.removeProperty('--isl-accent');
+      } else {
+        body.setAttribute('data-islands-accent', '');
+        body.style.setProperty('--isl-accent', color);
+      }
+    }
+
+    function storeAccent(color) {
+      try {
+        if (color === null) window.localStorage.removeItem(ACCENT_KEY);
+        else window.localStorage.setItem(ACCENT_KEY, color);
+      } catch {
+        /* private mode: keep the session choice. */
+      }
     }
 
     function useLocale() {
@@ -177,6 +270,367 @@ window.__ModuleLoader__.load({
         { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M3.5 6.5A5 5 0 1 1 3 9.5', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }),
         h('path', { d: 'M3 3.5v3h3', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      );
+    }
+
+    function readRailPins() {
+      try {
+        const raw = window.localStorage.getItem(RAIL_PIN_KEY);
+        const parsed = raw === null ? [] : JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeRailPins(pins) {
+      try {
+        window.localStorage.setItem(RAIL_PIN_KEY, JSON.stringify(pins));
+      } catch {
+        /* private mode: keep the session pins only. */
+      }
+    }
+
+    function HouseGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M3 8.6 10 3l7 5.6V16a1 1 0 0 1-1 1h-4v-4.5H8V17H4a1 1 0 0 1-1-1V8.6Z', stroke: 'currentColor', strokeWidth: 1.5, strokeLinejoin: 'round' }));
+    }
+
+    function ClockGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('circle', { cx: 10, cy: 10, r: 7, stroke: 'currentColor', strokeWidth: 1.5 }),
+        h('path', { d: 'M10 6.2V10l2.6 1.6', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
+
+    function PluginsGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('rect', { x: 3, y: 3, width: 6, height: 6, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('rect', { x: 11, y: 3, width: 6, height: 6, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('rect', { x: 3, y: 11, width: 6, height: 6, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.4 }),
+        h('path', { d: 'M14 11v6M11 14h6', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }));
+    }
+
+    function PlugGlyph() {
+      return h('svg', { width: 17, height: 17, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M7 3v4M13 3v4M5 7h10v3a5 5 0 0 1-10 0V7ZM10 15v3', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    function EllipsisGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'currentColor', 'aria-hidden': true },
+        h('circle', { cx: 5, cy: 10, r: 1.4 }),
+        h('circle', { cx: 10, cy: 10, r: 1.4 }),
+        h('circle', { cx: 15, cy: 10, r: 1.4 }));
+    }
+
+    function GearGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true },
+        h('circle', { cx: 12, cy: 12, r: 3, stroke: 'currentColor', strokeWidth: 1.6 }),
+        h('path', {
+          d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z',
+          stroke: 'currentColor',
+          strokeWidth: 1.6,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+      );
+    }
+
+    function openSettings() {
+      // The account launcher owns the Settings row; clicking that row is the
+      // reliable path on desktop (configurable shortcuts go through the native
+      // keyboard bridge, so a synthetic keydown never reaches them).
+      const trigger = document.querySelector('.kB3qhq_footArea button[aria-haspopup="menu"]');
+      if (trigger instanceof HTMLElement) {
+        trigger.click();
+        window.setTimeout(() => {
+          const item = [
+            ...document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menu"] [role="menuitemradio"], [role="menu"] button, [role="menu"] a'),
+          ].find((element) => /设置|Settings|偏好|Preferences/i.test(element.textContent ?? ''));
+          if (item instanceof HTMLElement) item.click();
+        }, 60);
+        return;
+      }
+      try {
+        const row = (shortcutsService?.catalog?.getSnapshot?.() ?? []).find(
+          (value) => value.id === 'settings.open' && value.binding !== null && value.binding !== undefined,
+        );
+        if (row?.binding !== undefined) {
+          const modifiers = new Set(row.binding.modifiers ?? []);
+          window.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              code: row.binding.code,
+              key: ',',
+              metaKey: modifiers.has('meta'),
+              ctrlKey: modifiers.has('control'),
+              altKey: modifiers.has('alt'),
+              shiftKey: modifiers.has('shift'),
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function LocateGlyph() {
+      return h('svg', { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('circle', { cx: 8, cy: 8, r: 4, stroke: 'currentColor', strokeWidth: 1.3 }),
+        h('path', { d: 'M8 1.5v2.2M8 12.3v2.2M1.5 8h2.2M12.3 8h2.2', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
+    }
+
+    function revealPinnedSession(sessionId, title) {
+      const projectRows = () => [...document.querySelectorAll('.JoiKIa_projectRow')];
+      const stateOf = (row) =>
+        row.getAttribute('aria-expanded') ??
+        row.querySelector('[aria-expanded]')?.getAttribute('aria-expanded');
+      const expanded = (row) => stateOf(row) === 'true';
+      const toggle = (row) => {
+        const chevron = row.querySelector('.JoiKIa_chevron');
+        if (chevron instanceof HTMLElement) chevron.click();
+        else row.click();
+      };
+
+      // Expand every workspace briefly so the target session exists in the DOM.
+      for (const row of projectRows()) {
+        if (!expanded(row)) toggle(row);
+      }
+
+      window.setTimeout(() => {
+        const candidates = [...document.querySelectorAll('.JoiKIa_sessionRow')].filter((row) =>
+          (row.textContent ?? '').includes(title),
+        );
+        if (candidates.length === 0) return;
+        const row = candidates[0];
+
+        // The owner is the nearest preceding Workspace row; nested ancestors stay open.
+        let owner = null;
+        for (const project of projectRows()) {
+          if ((project.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) owner = project;
+        }
+
+        for (const project of projectRows()) {
+          const keep = project === owner || project.contains(owner);
+          if (keep) {
+            if (!expanded(project)) toggle(project);
+          } else if (expanded(project)) {
+            toggle(project);
+          }
+        }
+
+        window.setTimeout(() => {
+          row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
+          row.focus({ preventScroll: true });
+          row.classList.add('isl-located');
+          window.setTimeout(() => row.classList.remove('isl-located'), 1400);
+        }, 140);
+      }, 180);
+    }
+
+    function PinGlyph() {
+      return h('svg', { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M6 2v4L4 8v1.5h3.2V14l.8 1 .8-1V9.5H12V8l-2-2V2', stroke: 'currentColor', strokeWidth: 1.3, strokeLinejoin: 'round' }));
+    }
+
+    /**
+     * Left rail: workspace home, automation, plugins, user-pinned plugins and
+     * a context menu for the rest.
+     */
+    function IslandsRail({ usePanelInfo }) {
+      const active = usePanelInfo((info) => info.activePanelId ?? null);
+      const [pins, setPins] = React.useState(readRailPins);
+      const [open, setOpen] = React.useState(false);
+      const [position, setPosition] = React.useState(null);
+      const railRef = React.useRef(null);
+      const menuRef = React.useRef(null);
+      const lang = useLocale() ?? 'en';
+      const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+
+      const allEntries = (() => {
+        try {
+          return (slotsService?.entriesOfSlot('sidebar.panellist') ?? []).map((entry) => ({
+            id: entry.options.id,
+            order: entry.options.order ?? 0,
+            label: typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label,
+            registrant: entry.registrant,
+            component: entry.component,
+          }));
+        } catch {
+          return [];
+        }
+      })();
+
+      const byId = new Map(allEntries.map((entry) => [entry.id, entry]));
+      const entries = allEntries.filter((entry) => entry.id !== 'plugins' && entry.id !== 'schedules');
+      const pinned = pins.filter((id) => entries.some((entry) => entry.id === id));
+
+      const iconFor = (id, size) => {
+        const entry = byId.get(id);
+        if (entry?.component !== undefined) {
+          try {
+            return h(entry.component, { size, active: active === id });
+          } catch {
+            /* fall back to the generic glyph */
+          }
+        }
+        if (id === 'schedules') return h(ClockGlyph);
+        if (id === 'plugins') return h(PluginsGlyph);
+        return h(PlugGlyph);
+      };
+
+      React.useEffect(() => {
+        if (!open) return;
+        const onDown = (event) => {
+          if (railRef.current?.contains(event.target) === true) return;
+          if (menuRef.current?.contains(event.target) === true) return;
+          setOpen(false);
+        };
+        const onKey = (event) => {
+          if (event.key === 'Escape') setOpen(false);
+        };
+        document.addEventListener('mousedown', onDown, true);
+        document.addEventListener('keydown', onKey, true);
+        return () => {
+          document.removeEventListener('mousedown', onDown, true);
+          document.removeEventListener('keydown', onKey, true);
+        };
+      }, [open]);
+
+      const openMenu = (anchor) => {
+        const rect = (anchor ?? railRef.current)?.getBoundingClientRect();
+        if (!rect) return;
+        setPosition({ left: rect.right + 8, top: Math.min(rect.top, window.innerHeight - 260) });
+        setOpen(true);
+      };
+
+      const togglePin = (id) => {
+        const next = pins.includes(id) ? pins.filter((value) => value !== id) : [...pins, id];
+        setPins(next);
+        writeRailPins(next);
+      };
+
+      const select = (id) => {
+        layoutService?.selectPanel(id);
+      };
+
+      const button = (id, label, glyph, extraClass) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'isl-railBtn' + (active === id ? ' is-active' : '') + (extraClass ? ` ${extraClass}` : ''),
+            title: label,
+            'aria-label': label,
+            'aria-pressed': active === id,
+            'data-rail-id': id ?? 'workspace',
+            onClick: () => select(id),
+          },
+          glyph,
+        );
+
+      const menu = open && position !== null
+        ? ReactDOM.createPortal(
+            h(
+              'div',
+              {
+                ref: menuRef,
+                className: 'isl-railMenu',
+                role: 'menu',
+                style: { left: position.left, top: position.top },
+              },
+              h('div', { className: 'isl-railMenuTitle' }, copy.railTitle),
+              entries.length === 0
+                ? h('div', { className: 'isl-railEmpty' }, copy.noExtras)
+                : entries.map((entry) =>
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        key: entry.id,
+                        className: 'isl-railMenuRow',
+                        role: 'menuitemcheckbox',
+                        'aria-checked': pins.includes(entry.id),
+                        onClick: () => togglePin(entry.id),
+                      },
+                      h('span', { className: 'isl-railMenuIcon' }, iconFor(entry.id, 16)),
+                      h(
+                        'span',
+                        { className: 'isl-railMenuText' },
+                        h('span', { className: 'isl-railMenuLabel' }, entry.label ?? entry.id),
+                        entry.registrant === undefined
+                          ? null
+                          : h('span', { className: 'isl-railMenuSub' }, entry.registrant),
+                      ),
+                      h(
+                        'span',
+                        {
+                          className: 'isl-railMenuPin' + (pins.includes(entry.id) ? ' is-pinned' : ''),
+                          title: copy.pin,
+                        },
+                        h(PinGlyph),
+                      ),
+                    ),
+                  ),
+            ),
+            document.body,
+          )
+        : null;
+
+      return h(
+        'nav',
+        {
+          ref: railRef,
+          className: 'isl-rail',
+          'aria-label': copy.workspace,
+          onContextMenu: (event) => {
+            event.preventDefault();
+            openMenu(event.currentTarget);
+          },
+        },
+        button(null, copy.workspace, h(HouseGlyph)),
+        button('schedules', copy.schedules, iconFor('schedules', 18)),
+        button('plugins', copy.plugins, iconFor('plugins', 18)),
+        pinned.map((id) => {
+          const entry = entries.find((value) => value.id === id);
+          const label = entry?.registrant === undefined ? entry?.label ?? id : `${entry?.label ?? id} · ${entry.registrant}`;
+          return button(id, label, iconFor(id, 18));
+        }),
+        h('div', { className: 'isl-railDivider', 'aria-hidden': true }),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'isl-railBtn is-more' + (open ? ' is-active' : ''),
+            title: copy.more,
+            'aria-label': copy.more,
+            'aria-haspopup': 'menu',
+            'aria-expanded': open,
+            onClick: (event) => {
+              if (open) setOpen(false);
+              else openMenu(event.currentTarget);
+            },
+          },
+          h(EllipsisGlyph),
+        ),
+        menu,
+      );
+    }
+
+    function IslandsRailSettings() {
+      const lang = useLocale() ?? 'en';
+      const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: 'isl-railBtn isl-railSettings',
+          title: withShortcut(copy.settings, 'settings.open'),
+          'aria-label': withShortcut(copy.settings, 'settings.open'),
+          onClick: openSettings,
+        },
+        h(GearGlyph),
       );
     }
 
@@ -264,6 +718,12 @@ window.__ModuleLoader__.load({
       };
 
       React.useEffect(() => {
+        const onOpen = () => openMenu();
+        window.addEventListener('islands:model-open', onOpen);
+        return () => window.removeEventListener('islands:model-open', onOpen);
+      }, [openMenu]);
+
+      React.useEffect(() => {
         if (!open) return;
         const onDown = (event) => {
           if (rootRef.current?.contains(event.target) === true) return;
@@ -338,7 +798,11 @@ window.__ModuleLoader__.load({
           'aria-haspopup': 'menu',
           'aria-expanded': open,
           'aria-label': modelName,
-          title: effortName === undefined ? modelName : `${modelName} · ${effortName}`,
+          title: withShortcut(
+            effortName === undefined ? modelName : `${modelName} · ${effortName}`,
+            'islands.model.open',
+            /Mac/i.test(navigator.platform ?? '') ? '⌘⇧M' : 'Ctrl+Shift+M',
+          ),
           disabled: locked || directory === null,
           onClick: () => (open ? close() : openMenu()),
         },
@@ -509,8 +973,8 @@ window.__ModuleLoader__.load({
         {
           type: 'button',
           className: 'isl-rightToggle',
-          'aria-label': label,
-          title: label,
+          'aria-label': withShortcut(label, 'sidebar.right.toggle'),
+          title: withShortcut(label, 'sidebar.right.toggle'),
           'aria-pressed': open,
           onClick: () => {
             const selector = open
@@ -561,8 +1025,8 @@ window.__ModuleLoader__.load({
           {
             type: 'button',
             className: 'isl-topbarToggle',
-            'aria-label': copy.topbarToggle,
-            title: copy.topbarToggle,
+            'aria-label': withShortcut(copy.topbarToggle, 'sidebar.left.toggle'),
+            title: withShortcut(copy.topbarToggle, 'sidebar.left.toggle'),
             onClick: () => toggleWorkspace(),
           },
           h(PanelGlyph),
@@ -572,42 +1036,266 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /** One settings row: label + description on the left, switch on the right. */
-    function IslandsPreferenceRow() {
-      const on = useEnabled();
-      const active = useLocale() ?? 'en';
-      const copy = String(active).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+    function IslandsLogo({ size = 30 }) {
       return h(
-        'div',
-        { className: 'isl-prefRow' },
+        'svg',
+        { width: size, height: size, viewBox: '0 0 64 64', fill: 'none', 'aria-hidden': true },
+        h('rect', { width: 64, height: 64, rx: 16, fill: '#0f1115' }),
+        h('rect', { x: 10, y: 10, width: 44, height: 44, rx: 11, fill: '#22252b' }),
+        h('rect', { x: 16, y: 16, width: 14, height: 32, rx: 6, fill: '#4176e6' }),
+        h('rect', { x: 34, y: 16, width: 14, height: 14, rx: 6, fill: '#f5f7fa' }),
+        h('rect', { x: 34, y: 34, width: 14, height: 14, rx: 6, fill: '#7aaaff' }),
+      );
+    }
+
+    /**
+     * Aggregate pinned sessions above the workspace groups. The block lives
+     * in a host div inserted before the DSH workspace list, so it participates
+     * in the sidebar flow while rendering as React through a portal.
+     */
+    function IslandsPinnedSection({ useWorkspaces, useSessions }) {
+      const pinnedIds = useWorkspaces((state) => state.pinnedSessionIds ?? []);
+      const sessions = useSessions((state) => state.byId ?? {});
+      const [host, setHost] = React.useState(null);
+      const [collapsed, setCollapsed] = React.useState(() => {
+        try {
+          return window.localStorage.getItem('dsh-islands-ui:pinned-collapsed') === '1';
+        } catch {
+          return false;
+        }
+      });
+      const lang = useLocale() ?? 'en';
+      const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+
+      React.useEffect(() => {
+        let current = null;
+        const attach = () => {
+          const header = document.querySelector('.Kjh-qa_sectionHeader');
+          const tree = document.querySelector('.Kjh-qa_treeBody') ?? document.querySelector('.Kjh-qa_list');
+          const target = header?.parentElement ?? tree?.parentElement;
+          if (target === null || target === undefined) return;
+          let anchor = target.querySelector(':scope > .isl-pinnedHost');
+          if (anchor === null || !anchor.isConnected) {
+            anchor = document.createElement('div');
+            anchor.className = 'isl-pinnedHost';
+          }
+          // Sit between the New Session row and the Workspace section header.
+          if (header !== null && header !== undefined) {
+            if (anchor.nextElementSibling !== header) target.insertBefore(anchor, header);
+          } else if (tree !== null && tree !== undefined) {
+            if (anchor.nextElementSibling !== tree) target.insertBefore(anchor, tree);
+          } else {
+            target.appendChild(anchor);
+          }
+          if (current !== anchor) {
+            current = anchor;
+            setHost(anchor);
+          }
+        };
+        attach();
+        const timer = window.setInterval(attach, 800);
+        return () => {
+          window.clearInterval(timer);
+          current?.remove();
+        };
+      }, []);
+
+      const rows = pinnedIds.map((id) => sessions[id]).filter((session) => session !== undefined);
+      if (host === null || rows.length === 0) return null;
+
+      const toggle = () => {
+        const next = !collapsed;
+        setCollapsed(next);
+        try {
+          window.localStorage.setItem('dsh-islands-ui:pinned-collapsed', next ? '1' : '0');
+        } catch {
+          /* ignore */
+        }
+      };
+
+      return ReactDOM.createPortal(
         h(
           'div',
-          { className: 'isl-prefText' },
-          h('div', { className: 'isl-prefTitle' }, copy.title),
-          h('div', { className: 'isl-prefDesc' }, copy.description),
+          { className: 'isl-pinned', 'data-open': collapsed ? undefined : '' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'isl-pinnedHead',
+              'aria-expanded': !collapsed,
+              title: copy.pinned,
+              onClick: toggle,
+            },
+            h('span', { className: 'isl-pinnedChevron' }, h(ChevronGlyph)),
+            h('span', { className: 'isl-pinnedTitle' }, copy.pinned),
+            h('span', { className: 'isl-pinnedCount' }, String(rows.length)),
+          ),
+          collapsed
+            ? null
+            : h(
+                'div',
+                { className: 'isl-pinnedList' },
+                rows.map((session) => {
+                  const id = session.id ?? session.sessionId;
+                  const title = String(session.title ?? '').trim() || copy.untitled;
+                  return h(
+                    'div',
+                    {
+                      key: id,
+                      className: 'isl-pinnedRow',
+                      role: 'button',
+                      tabIndex: 0,
+                      title,
+                      onClick: () => uiWorkspaceService?.openSession(id),
+                      onKeyDown: (event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        event.preventDefault();
+                        uiWorkspaceService?.openSession(id);
+                      },
+                    },
+                    h('span', { className: 'isl-pinnedName' }, title),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'isl-pinnedLocate',
+                        title: copy.locate,
+                        'aria-label': copy.locate,
+                        onClick: (event) => {
+                          event.stopPropagation();
+                          revealPinnedSession(id, title);
+                        },
+                      },
+                      h(LocateGlyph),
+                    ),
+                  );
+                }),
+              ),
+        ),
+        host,
+      );
+    }
+
+    /** Islands settings page: skin switch + accent color. */
+    function IslandsSettingsPage() {
+      const on = useEnabled();
+      const lang = useLocale() ?? 'en';
+      const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      const [accent, setAccent] = React.useState(readAccent);
+      const chooseAccent = (color) => {
+        setAccent(color);
+        applyAccent(color);
+        storeAccent(color);
+      };
+      return h(
+        'div',
+        { className: 'isl-settingsPage' },
+        h(
+          'div',
+          { className: 'isl-settingsPageHead' },
+          h('span', { className: 'isl-settingsPageLogo' }, h(IslandsLogo, { size: 30 })),
+          h(
+            'div',
+            { className: 'isl-settingsPageHeadText' },
+            h('div', { className: 'isl-settingsPageTitle' }, copy.title),
+            h('div', { className: 'isl-settingsPageDesc' }, copy.description),
+          ),
         ),
         h(
-          'button',
-          {
-            type: 'button',
-            role: 'switch',
-            className: 'isl-switch',
-            'aria-checked': on,
-            'aria-label': copy.title,
-            title: copy.title,
-            onClick: () => setEnabled(!on),
-          },
-          h('span', { className: 'isl-switchThumb' }),
+          'div',
+          { className: 'isl-prefRow' },
+          h(
+            'div',
+            { className: 'isl-prefText' },
+            h('div', { className: 'isl-prefTitle' }, copy.enable),
+            h('div', { className: 'isl-prefDesc' }, copy.enableDesc),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'switch',
+              className: 'isl-switch',
+              'aria-checked': on,
+              'aria-label': copy.enable,
+              title: copy.enable,
+              onClick: () => setEnabled(!on),
+            },
+            h('span', { className: 'isl-switchThumb' }),
+          ),
         ),
+        h(
+          'div',
+          { className: 'isl-prefRow' },
+          h(
+            'div',
+            { className: 'isl-prefText' },
+            h('div', { className: 'isl-prefTitle' }, copy.accent),
+            h('div', { className: 'isl-prefDesc' }, copy.accentDesc),
+          ),
+          h(
+            'div',
+            { className: 'isl-accentPicker' },
+            h('button', {
+              type: 'button',
+              className: 'isl-accentSwatch is-default' + (accent === null ? ' is-selected' : ''),
+              title: copy.accentDefault,
+              'aria-label': copy.accentDefault,
+              'aria-pressed': accent === null,
+              onClick: () => chooseAccent(null),
+            }),
+            ACCENT_PRESETS.map((color) =>
+              h('button', {
+                type: 'button',
+                key: color,
+                className:
+                  'isl-accentSwatch' + (accent !== null && accent.toLowerCase() === color.toLowerCase() ? ' is-selected' : ''),
+                style: { background: color },
+                title: color,
+                'aria-label': color,
+                'aria-pressed': accent !== null && accent.toLowerCase() === color.toLowerCase(),
+                onClick: () => chooseAccent(color),
+              }),
+            ),
+            h(
+              'label',
+              { className: 'isl-accentCustom', title: copy.accentCustom },
+              h('input', {
+                type: 'color',
+                value: accent ?? DEFAULT_ACCENT,
+                'aria-label': copy.accentCustom,
+                onChange: (event) => chooseAccent(event.target.value),
+              }),
+            ),
+          ),
+        ),
+      );
+    }
+
+    function IslandsSectionIcon({ size = 16 }) {
+      return h(
+        'svg',
+        { width: size, height: size, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('rect', { x: 1.5, y: 1.5, width: 5.5, height: 5.5, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.3 }),
+        h('rect', { x: 9, y: 1.5, width: 5.5, height: 5.5, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.3 }),
+        h('rect', { x: 1.5, y: 9, width: 5.5, height: 5.5, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.3 }),
+        h('rect', { x: 9, y: 9, width: 5.5, height: 5.5, rx: 1.6, stroke: 'currentColor', strokeWidth: 1.3 }),
       );
     }
 
     return {
       inject: ['slots', 'locale', 'layout'],
       apply(ctx) {
+        ctx.inject(['uiWorkspace', 'workspaces'], (scope) => {
+          uiWorkspaceService = scope.uiWorkspace;
+          workspacesService = scope.workspaces;
+        });
+
         localeService = ctx.locale;
         layoutService = ctx.layout;
+        slotsService = ctx.slots;
         syncAttribute();
+        applyAccent(readAccent());
 
         ctx.effect(() => {
           if (document.body !== null && !document.body.hasAttribute(ATTRIBUTE) && readStored()) {
@@ -643,6 +1331,18 @@ window.__ModuleLoader__.load({
           ctx.slots.register({ name: 'shell.overlay', id: 'islands-topbar', order: -100 }, IslandsTopBar),
         );
 
+        ctx.slots.inject('shell.overlay', () =>
+          ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail', order: -90 }, IslandsRail),
+        );
+
+        ctx.slots.inject('shell.overlay', () =>
+          ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail-settings', order: -89 }, IslandsRailSettings),
+        );
+
+        ctx.slots.inject('shell.overlay', () =>
+          ctx.slots.register({ name: 'shell.overlay', id: 'islands-pinned', order: -88 }, IslandsPinnedSection),
+        );
+
         ctx.inject(['slots', 'modelDirectories'], (scope) => {
           modelDirectories = scope.modelDirectories;
           // Single slots render the lowest priority; a negative priority shadows
@@ -656,6 +1356,34 @@ window.__ModuleLoader__.load({
         // input listeners run before the catalog dispatch, so the DSH
         // sidebar.left.toggle never swaps in its rail-only render tree.
         ctx.inject(['shortcuts'], (scope) => {
+          shortcutsService = scope.shortcuts;
+
+          ctx.effect(
+            () => {
+              try {
+                return scope.shortcuts.register({
+                  id: 'islands.model.open',
+                  label: () => 'Model picker',
+                  defaults: {
+                    'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                    'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                    'desktop:linux': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                  },
+                  regions: ['page', 'editable'],
+                  modals: [],
+                  resolve: () => ({
+                    status: 'handled',
+                    run: () => window.dispatchEvent(new CustomEvent('islands:model-open')),
+                  }),
+                });
+              } catch (error) {
+                console.warn('[islands-ui] model picker shortcut unavailable', error);
+                return undefined;
+              }
+            },
+            'dsh-islands-ui: model picker shortcut',
+          );
+
           const off = scope.shortcuts.observeFixedInput((input) => {
             if (input.type !== 'keydown') return;
             if (!document.body.hasAttribute(ATTRIBUTE)) return;
@@ -713,11 +1441,15 @@ window.__ModuleLoader__.load({
           };
         }, 'dsh-islands-ui: native collapse conversion');
 
-        ctx.slots.inject('settings.general.item', () =>
+        ctx.slots.inject('settings.section', () =>
           ctx.slots.register(
-            { name: 'settings.general.item', id: 'islands-ui', order: 13 },
-            IslandsPreferenceRow,
+            { name: 'settings.section', id: 'islands-ui', order: 30, label: 'Islands UI' },
+            IslandsSettingsPage,
           ),
+        );
+
+        ctx.slots.inject('settings.section.icon', () =>
+          ctx.slots.register({ name: 'settings.section.icon', id: 'islands-ui' }, IslandsSectionIcon),
         );
       },
     };
