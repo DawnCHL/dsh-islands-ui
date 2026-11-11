@@ -6,7 +6,7 @@
 body[data-islands-ui] .PIRFFq_frame {
   /* The ocean is a solid surface, never the desktop showing through vibrancy. */
   background: var(--isl-canvas);
-  padding: calc(var(--isl-topbar-height) + var(--isl-gap)) var(--isl-gap) var(--isl-gap);
+  padding: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + var(--isl-gap)) var(--isl-gap) var(--isl-gap);
   /* Column gap only: the empty bottom track must not steal an extra row gap,
      so the islands stay symmetric top and bottom. */
   gap: 0 var(--isl-gap);
@@ -93,7 +93,6 @@ body[data-islands-ui] .PIRFFq_handle {
 }
 
 [data-windows-titlebar] body[data-islands-ui] .PIRFFq_frame {
-  padding-top: var(--dsh-windows-titlebar-height);
   background: var(--isl-canvas);
 }
 
