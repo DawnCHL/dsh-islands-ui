@@ -32,6 +32,7 @@ window.__ModuleLoader__.load({
     const COMPAT_CONTENT_GRACE_MS = 1200;
     let animateTimer;
     let skinRegistrar = null;
+    let publishRightbarWidth = null;
     let activated = false;
     let compatState = { status: 'checking', missing: [], forced: false };
     const compatListeners = new Set();
@@ -1106,29 +1107,69 @@ window.__ModuleLoader__.load({
       return open;
     }
 
-    /** Always-visible right sidebar toggle; drives the native open/collapse actions. */
+    function rightPanelOpenNow() {
+      return document.querySelector('.Dv5QdW_panel[data-sidebar-right-open]') !== null;
+    }
+
+    /**
+     * The shipped control is a button that the skin hides and DSH can disable
+     * (it is `disabled` whenever the layout already counts the pane as open),
+     * so clicking it is not a dependable contract. Ask the layout service
+     * first and only fall back to the control when the service ignored us.
+     */
+    function toggleRightPanel() {
+      const wantOpen = !rightPanelOpenNow();
+      try {
+        if (wantOpen) layoutService?.openRightbar?.(true, false);
+        else layoutService?.closeRightbar?.();
+      } catch {
+        /* fall through to the shipped control */
+      }
+      window.setTimeout(() => {
+        if (rightPanelOpenNow() === wantOpen) {
+          // The pane can be mounted with its width preference already set;
+          // republish so a collapsed workspace gets the right grid track.
+          if (wantOpen) publishRightbarWidth?.();
+          return;
+        }
+        const selector = wantOpen ? '[data-sidebar-right-expand]' : '[data-sidebar-right-toggle]';
+        const target = document.querySelector(selector);
+        if (target instanceof HTMLElement) target.click();
+      }, 120);
+    }
+
+    /**
+     * Always-visible right sidebar toggle; drives the native open/collapse actions.
+     *
+     * Rendered into `document.body`, not into the top bar: the frame's overlay
+     * layer is z-index 20, while the workbench panel host (dsh-better-sidebar)
+     * is a full-viewport fixed layer at z-index 25 and re-enables pointer
+     * events on its dock strip — the same top-right band the native expand
+     * button used to occupy. Anything painted inside the frame therefore sits
+     * UNDER that strip: the toggle still renders (the strip is transparent
+     * there) but never sees hover or clicks. A body-level portal escapes both
+     * stacking contexts; the stylesheet keeps it above the workbench
+     * (25/40/60/90) and below the app's menus and dialogs (1000+).
+     */
     function RightPanelToggle() {
       const open = useRightPanelOpen();
       const active = useLocale() ?? 'en';
       const copy = String(active).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
       const label = open ? copy.closeRight : copy.openRight;
-      return h(
-        'button',
-        {
-          type: 'button',
-          className: 'isl-rightToggle',
-          'aria-label': withShortcut(label, 'sidebar.right.toggle'),
-          title: withShortcut(label, 'sidebar.right.toggle'),
-          'aria-pressed': open,
-          onClick: () => {
-            const selector = open
-              ? '[data-sidebar-right-toggle]'
-              : '[data-sidebar-right-expand]';
-            const target = document.querySelector(selector);
-            if (target !== null) target.click();
+      return ReactDOM.createPortal(
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'isl-rightToggle',
+            'aria-label': withShortcut(label, 'sidebar.right.toggle'),
+            title: withShortcut(label, 'sidebar.right.toggle'),
+            'aria-pressed': open,
+            onClick: toggleRightPanel,
           },
-        },
-        h(RightPanelGlyph),
+          h(RightPanelGlyph),
+        ),
+        document.body,
       );
     }
 
@@ -1804,6 +1845,7 @@ window.__ModuleLoader__.load({
             };
 
             locate();
+            publishRightbarWidth = locate;
             // The client applies before the shell mounts, so the first query can
             // miss the right pane. Watch until it appears (bounded: a profile
             // without the right pane must not keep a document-wide observer).
@@ -1822,6 +1864,7 @@ window.__ModuleLoader__.load({
               if (retryTimer !== null) clearTimeout(retryTimer);
               mountObserver?.disconnect();
               styleObserver?.disconnect();
+              if (publishRightbarWidth === locate) publishRightbarWidth = null;
               root.style.removeProperty('--isl-rightbar-w');
             };
           }, 'dsh-islands-ui: rightbar width');

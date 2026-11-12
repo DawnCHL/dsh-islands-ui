@@ -119,11 +119,22 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
    instead, and closes through the native collapse action. It applies at every
    width: the narrow top bar keeps the same control.
    ========================================================================== */
+/* Body-portaled (see RightPanelToggle): keep it out of the DOM flow while the
+   skin is off, so the base rule cannot leak a raw button into the page. */
+.isl-rightToggle {
+  display: none;
+}
+
+/* z-index 900: above the workbench panel host (dsh-better-sidebar: host 25,
+   dock 40, float 60, floating window 90) and the app's transient tooltip/
+   hovercard layer (100), below menus and dialogs (1000+). The button is
+   portaled to <body>, so this value competes with the body-level layers
+   directly instead of being trapped in the frame's z-index-20 overlay layer. */
 body[data-islands-ui] .isl-rightToggle {
   position: fixed;
   top: calc(var(--isl-chrome-top) + 10px);
   right: var(--isl-gap);
-  z-index: 32;
+  z-index: 900;
   box-sizing: border-box;
   display: grid;
   place-items: center;
