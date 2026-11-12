@@ -153,6 +153,31 @@ body[data-islands-ui] :focus-visible {
   margin-top: 12px;
 }
 
+/* Detected DSH release + sidebar dialect: diagnosis for support reports. */
+.isl-settingsMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.isl-settingsMetaValue {
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--isl-surface-muted);
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+}
+
+.isl-settingsMetaSeparator {
+  opacity: 0.6;
+}
+
 .isl-accentPicker {
   display: flex;
   align-items: center;

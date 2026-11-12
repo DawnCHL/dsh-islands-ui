@@ -12,6 +12,12 @@ window.__ModuleLoader__.load({
     const ReactDOM = require('react-dom');
     const h = React.createElement;
     const CSS = '__ISLANDS_CSS__';
+    /**
+     * Structure-specific stylesheets keyed by dialect. The base sheet covers
+     * the flat sidebar; releases that change the shell get a variant that is
+     * inlined only for the build the client detected.
+     */
+    const CSS_VARIANTS = '__ISLANDS_CSS_VARIANTS__';
 
     const ATTRIBUTE = 'data-islands-ui';
     const STORAGE_KEY = 'dsh-islands-ui:enabled';
@@ -26,6 +32,14 @@ window.__ModuleLoader__.load({
     const REQUIRED_ANCHORS = ['.PIRFFq_frame', '.PIRFFq_centerCol'];
     const SIDEBAR_COLUMN = '.PIRFFq_sidebarCol';
     const SIDEBAR_ROOT = '.kB3qhq_root';
+    /**
+     * Sidebar-shell dialects in release order. `since` is the first DSH release
+     * that ships the dialect; a build older than every row keeps the base
+     * stylesheet. Add a row (and a matching `src/variants/<dialect>.css`) when
+     * DSH restructures the shell again.
+     */
+    const SHELL_DIALECTS = [{ since: '0.2.2-rc.2', dialect: 'scroll' }];
+    const SHELL_FLAT = 'flat';
     /** No shell content at all after this long: the build is unusable. */
     const COMPAT_TIMEOUT_MS = 6000;
     /** Content mounted but the frame anchor never showed up: rename, not slowness. */
@@ -34,7 +48,11 @@ window.__ModuleLoader__.load({
     let skinRegistrar = null;
     let publishRightbarWidth = null;
     let activated = false;
-    let compatState = { status: 'checking', missing: [], forced: false };
+    /** Release reported by the client boot, and the stylesheet it selects. */
+    let shellVersion = null;
+    let shellDialect = SHELL_FLAT;
+    let styleTag = null;
+    let compatState = { status: 'checking', missing: [], forced: false, version: null, dialect: SHELL_FLAT };
     const compatListeners = new Set();
 
     /** Copy for the preference row; the row is the only user-facing string. */
@@ -72,6 +90,40 @@ window.__ModuleLoader__.load({
         pick: '选择模型',
         empty: '没有可用模型',
         failed: '切换失败',
+        updateAvailable: '发现新版本 {version}',
+        updateAvailablePlain: '发现新版本',
+        updateDownloading: '正在下载更新 {percent}%',
+        updateDownloadingDetail: '正在下载更新：{percent}%\n目标版本：{version}',
+        updateVerifying: '正在校验更新文件…',
+        updateInstalling: '正在准备重启…',
+        updateReady: '安装并重启',
+        updateReadyDetail: '新版本 {version} 已准备就绪，点击安装并重启',
+        updateRetry: '重试更新',
+        updateFailedCheck: '检查更新失败，请稍后重试。',
+        updateFailedCheckNetwork: '检查更新失败，请检查网络连接后重试。',
+        updateFailedDownload: '下载更新失败，请重试。',
+        updateFailedDownloadNetwork: '下载更新失败，请检查网络连接后重试。',
+        updateFailedInstall: '安装更新失败，请稍后重试。',
+        updateFailedInstallNetwork: '安装更新失败，请检查网络连接后重试。',
+        updateFailedStop: '未能安全停止任务，更新尚未安装，请稍后重试。',
+        updateFailedTasksChanged: '有新任务开始运行，请重新确认是否停止任务并更新。',
+        updateFailedTasksUnavailable: '无法确认任务状态，请在工作区就绪后重试更新。',
+        updateFailedFullscreen: '无法退出全屏，请退出全屏后重试更新。',
+        updateFailedGeneric: '更新失败，请稍后重试。',
+        updateConfigUnavailable: '配置不可用',
+        updateConfigRead: '更新已暂停：无法读取配置文件',
+        updateConfigFormat: '更新已暂停：配置文件格式有误',
+        updateConfigChannel: '更新已暂停：channel 只能是 nightly 或 stable',
+        updateConfigCleanup: '更新已暂停：无法清理旧更新，请重启应用',
+        updateConfigGeneric: '更新已暂停：配置不可用',
+        updateShowcaseTitle: '更新按钮状态',
+        updateShowcaseDesc: '桌面端设置齿轮上方的更新入口在各阶段的外观；没有可用更新时按钮隐藏。',
+        updateStateAvailable: '发现新版本',
+        updateStateDownloading: '下载中',
+        updateStateVerifying: '校验中',
+        updateStateInstalling: '准备重启',
+        updateStateReady: '安装并重启',
+        updateStateError: '更新失败',
         compatTitle: 'Islands UI 已自动关闭',
         compatBody: '当前 DSH 构建的界面结构与插件不匹配，皮肤已回退到默认外观，以免出现双栏重叠或控件遮挡。',
         compatView: '查看插件设置',
@@ -83,6 +135,10 @@ window.__ModuleLoader__.load({
         compatForce: '仍然启用',
         compatForced: '已强制启用，本次会话跳过自动检测。',
         compatDismiss: '关闭提示',
+        compatDetected: '检测到 DSH',
+        compatStructure: '侧栏结构',
+        compatStructureFlat: '平铺',
+        compatStructureScroll: '滚动容器',
       },
       en: {
         title: 'Islands interface',
@@ -118,6 +174,41 @@ window.__ModuleLoader__.load({
         pick: 'Select model',
         empty: 'No models available',
         failed: 'Selection failed',
+        updateAvailable: 'Update {version} available',
+        updateAvailablePlain: 'Update available',
+        updateDownloading: 'Downloading update {percent}%',
+        updateDownloadingDetail: 'Downloading update: {percent}%\nTarget version: {version}',
+        updateVerifying: 'Verifying update files…',
+        updateInstalling: 'Preparing to restart…',
+        updateReady: 'Install and restart',
+        updateReadyDetail: 'Version {version} is ready. Click to install and restart.',
+        updateRetry: 'Retry update',
+        updateFailedCheck: 'Could not check for updates. Please try again later.',
+        updateFailedCheckNetwork: 'Could not check for updates. Check your connection and try again.',
+        updateFailedDownload: 'Could not download the update. Please try again.',
+        updateFailedDownloadNetwork: 'Could not download the update. Check your connection and try again.',
+        updateFailedInstall: 'Could not install the update. Please try again later.',
+        updateFailedInstallNetwork: 'Could not install the update. Check your connection and try again.',
+        updateFailedStop: 'Could not safely stop the tasks. The update has not been installed. Please try again later.',
+        updateFailedTasksChanged: 'New tasks have started. Confirm again to stop the tasks and update.',
+        updateFailedTasksUnavailable: 'Task status is unavailable. Try updating again when the workspace is ready.',
+        updateFailedFullscreen: 'Could not exit fullscreen. Exit fullscreen, then retry the update.',
+        updateFailedGeneric: 'The update failed. Please try again later.',
+        updateConfigUnavailable: 'Configuration unavailable',
+        updateConfigRead: 'Updates paused: cannot read settings file',
+        updateConfigFormat: 'Updates paused: invalid settings file',
+        updateConfigChannel: 'Updates paused: channel must be nightly or stable',
+        updateConfigCleanup: 'Updates paused: cannot discard previous update; restart the app',
+        updateConfigGeneric: 'Updates paused: configuration unavailable',
+        updateShowcaseTitle: 'Update button states',
+        updateShowcaseDesc:
+          'How the desktop update entry above the settings gear looks in each phase. It is hidden when no update is available.',
+        updateStateAvailable: 'Update available',
+        updateStateDownloading: 'Downloading',
+        updateStateVerifying: 'Verifying',
+        updateStateInstalling: 'Preparing restart',
+        updateStateReady: 'Install and restart',
+        updateStateError: 'Update failed',
         compatTitle: 'Islands UI turned itself off',
         compatBody:
           'This DSH build no longer matches the plugin, so the skin fell back to the default look instead of overlapping panels.',
@@ -131,6 +222,10 @@ window.__ModuleLoader__.load({
         compatForce: 'Enable anyway',
         compatForced: 'Enabled manually; automatic detection is skipped for this session.',
         compatDismiss: 'Dismiss',
+        compatDetected: 'Detected DSH',
+        compatStructure: 'Sidebar structure',
+        compatStructureFlat: 'flat',
+        compatStructureScroll: 'scroll containers',
       },
     };
 
@@ -246,6 +341,102 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * The DSH release this page booted with. The client module system publishes
+     * it in `window.__DSH_BOOT__.release` (shared with the CLI version), so a
+     * plugin can pick the stylesheet written for the running shell without a
+     * Host round trip.
+     */
+    function readDshVersion() {
+      try {
+        const release = window.__DSH_BOOT__?.release;
+        return typeof release?.version === 'string' && release.version !== '' ? release.version : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function parseVersion(value) {
+      const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u.exec(String(value).trim());
+      if (match === null) return null;
+      return {
+        core: [Number(match[1]), Number(match[2]), Number(match[3])],
+        pre: match[4] === undefined ? [] : match[4].split('.'),
+      };
+    }
+
+    /** Semver precedence, including numeric pre-release identifiers. */
+    function compareVersions(left, right) {
+      const a = parseVersion(left);
+      const b = parseVersion(right);
+      if (a === null || b === null) return null;
+      for (let index = 0; index < 3; index += 1) {
+        if (a.core[index] === b.core[index]) continue;
+        return a.core[index] < b.core[index] ? -1 : 1;
+      }
+      if (a.pre.length === 0 || b.pre.length === 0) {
+        return a.pre.length === b.pre.length ? 0 : a.pre.length === 0 ? 1 : -1;
+      }
+      const length = Math.max(a.pre.length, b.pre.length);
+      for (let index = 0; index < length; index += 1) {
+        const x = a.pre[index];
+        const y = b.pre[index];
+        if (x === undefined) return -1;
+        if (y === undefined) return 1;
+        const xNumeric = /^\d+$/u.test(x);
+        const yNumeric = /^\d+$/u.test(y);
+        if (xNumeric && yNumeric) {
+          const diff = Number(x) - Number(y);
+          if (diff !== 0) return diff < 0 ? -1 : 1;
+        } else if (xNumeric !== yNumeric) {
+          // Numeric identifiers always sort before alphanumeric ones.
+          return xNumeric ? -1 : 1;
+        } else if (x !== y) {
+          return x < y ? -1 : 1;
+        }
+      }
+      return 0;
+    }
+
+    /** Dialect the reported release ships; null when the version is unreadable. */
+    function dialectForVersion(version) {
+      if (version === null || parseVersion(version) === null) return null;
+      let dialect = SHELL_FLAT;
+      for (const row of SHELL_DIALECTS) {
+        const order = compareVersions(version, row.since);
+        if (order !== null && order >= 0) dialect = row.dialect;
+      }
+      return dialect;
+    }
+
+    /**
+     * Structure the mounted shell actually uses, read from the housekeeping
+     * classes rather than the version: `flat` is the pre-0.2.2-rc.2 sidebar,
+     * `scroll` the one wrapped in scroll containers, and `unknown` a shell no
+     * stylesheet was written against. Null means the shell has not mounted.
+     */
+    function detectShellDialect() {
+      const root = document.querySelector(SIDEBAR_ROOT);
+      if (root === null) return null;
+      const scrollRegion = root.querySelector(':scope > .kB3qhq_scrollRegion');
+      if (scrollRegion !== null) {
+        return scrollRegion.querySelector(':scope > .kB3qhq_scrollArea') !== null ? 'scroll' : 'unknown';
+      }
+      return root.querySelector(':scope > .kB3qhq_regionArea') !== null ? SHELL_FLAT : 'unknown';
+    }
+
+    function stylesheetFor(dialect) {
+      const variant = CSS_VARIANTS[dialect];
+      if (typeof variant !== 'string' || variant === '') return CSS;
+      return `${CSS}\n\n/* ---- variant: ${dialect} ---- */\n${variant}`;
+    }
+
+    /** Swap the injected stylesheet when the detected structure changes. */
+    function applyStylesheet(dialect) {
+      shellDialect = dialect;
+      if (styleTag !== null) styleTag.textContent = stylesheetFor(dialect);
+    }
+
     /** Which anchors of the running DSH build are gone. */
     function missingAnchors() {
       const missing = REQUIRED_ANCHORS.filter((selector) => document.querySelector(selector) === null);
@@ -253,6 +444,11 @@ window.__ModuleLoader__.load({
       // under another name; the skin would render a second rail beside it.
       if (document.querySelector(SIDEBAR_COLUMN) !== null && document.querySelector(SIDEBAR_ROOT) === null) {
         missing.push(SIDEBAR_ROOT);
+      }
+      // A shell that matches no known dialect cannot be styled without the
+      // half-applied layout this gate exists to prevent.
+      if (detectShellDialect() === 'unknown') {
+        missing.push(shellDialect === 'scroll' ? '.kB3qhq_scrollRegion > .kB3qhq_scrollArea' : '.kB3qhq_regionArea');
       }
       return missing;
     }
@@ -363,6 +559,70 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M3.5 6.5A5 5 0 1 1 3 9.5', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }),
         h('path', { d: 'M3 3.5v3h3', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }),
       );
+    }
+
+    function DownloadGlyph() {
+      return h(
+        'svg',
+        { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M10 3.4v8.2', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' }),
+        h('path', { d: 'm6.7 8.7 3.3 3.3 3.3-3.3', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        h('path', { d: 'M4.5 15.6h11', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' }),
+      );
+    }
+
+    function RestartGlyph() {
+      return h(
+        'svg',
+        { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M16.4 8.1A6.5 6.5 0 1 0 16.4 12', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }),
+        h('path', { d: 'M16.4 3.9v4.2h-4.2', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      );
+    }
+
+    function DotMatrixGlyph({ variant }) {
+      const rings = [2, 1, 2, 1, 0, 1, 2, 1, 2];
+      const smiley = new Set([0, 2, 7]);
+      // Windows for the 720 ms smiley rotation: each cell is lit for one or
+      // two 180 ms phases; the first cell wraps across the cycle boundary.
+      const phases = [
+        { span: 'wrap', delay: 0 },
+        { span: 1, delay: 360 },
+        { span: 2, delay: 0 },
+        { span: 1, delay: 180 },
+        { span: null, delay: 0 },
+        { span: 1, delay: 540 },
+        { span: 2, delay: 360 },
+        { span: 1, delay: 0 },
+        { span: 2, delay: 180 },
+      ];
+      return h(
+        'span',
+        { className: `isl-dmx isl-dmx-${variant}`, 'aria-hidden': true },
+        Array.from({ length: 9 }, (_, index) =>
+          h('span', {
+            key: index,
+            className: 'isl-dmx-dot',
+            'data-col': index % 3,
+            'data-ring': rings[index],
+            'data-on': smiley.has(index) ? '1' : '0',
+            'data-span': variant === 'smiley' ? phases[index].span ?? undefined : undefined,
+            style:
+              variant === 'smiley'
+                ? { animationDelay: `${phases[index].delay}ms` }
+                : { '--dmx-col': index % 3, '--dmx-ring': rings[index] },
+          }),
+        ),
+      );
+    }
+
+    /** Shared face for the live rail button and the settings showcase. */
+    function UpdateGlyph({ phase }) {
+      if (phase === 'available') return h(DownloadGlyph);
+      if (phase === 'ready' || phase === 'error') return h(RestartGlyph);
+      if (phase === 'downloading') return h(DotMatrixGlyph, { variant: 'column' });
+      if (phase === 'verifying') return h(DotMatrixGlyph, { variant: 'smiley' });
+      return h(DotMatrixGlyph, { variant: 'ripple' });
     }
 
     function readRailPins() {
@@ -772,6 +1032,239 @@ window.__ModuleLoader__.load({
           onClick: openSettings,
         },
         h(GearGlyph),
+      );
+    }
+
+    /**
+     * The desktop preload exposes update state only to the product page. Keep
+     * the lookup optional so the same bundle stays inert in a plain browser.
+     */
+    function desktopUpdateBridge() {
+      try {
+        const bridge = globalThis.dshDesktop;
+        return bridge?.protocolVersion === 1 ? bridge.updates : undefined;
+      } catch {
+        return undefined;
+      }
+    }
+
+    function formatCopy(template, values) {
+      return String(template).replace(/\{(\w+)\}/g, (match, key) =>
+        values[key] === undefined ? match : String(values[key]),
+      );
+    }
+
+    const UPDATE_FAILURE_KEYS = {
+      check: 'updateFailedCheck',
+      'check-network': 'updateFailedCheckNetwork',
+      download: 'updateFailedDownload',
+      'download-network': 'updateFailedDownloadNetwork',
+      install: 'updateFailedInstall',
+      'install-network': 'updateFailedInstallNetwork',
+      'stop-failed': 'updateFailedStop',
+      'tasks-changed': 'updateFailedTasksChanged',
+      'tasks-unavailable': 'updateFailedTasksUnavailable',
+      'fullscreen-timeout': 'updateFailedFullscreen',
+    };
+
+    function updateFailureCopy(state, copy) {
+      const key = UPDATE_FAILURE_KEYS[state?.failure] ?? 'updateFailedGeneric';
+      return copy[key] ?? copy.updateFailedGeneric;
+    }
+
+    const UPDATE_CONFIGURATION_KEYS = {
+      read: 'updateConfigRead',
+      format: 'updateConfigFormat',
+      channel: 'updateConfigChannel',
+      cleanup: 'updateConfigCleanup',
+    };
+
+    /** DSH 0.2.2-rc.2 added channel configuration failures to the presentation. */
+    function updateConfigurationCopy(state, copy) {
+      const key = UPDATE_CONFIGURATION_KEYS[state?.configurationError] ?? 'updateConfigGeneric';
+      return {
+        label: copy.updateConfigUnavailable,
+        detail: copy[key] ?? copy.updateConfigGeneric,
+      };
+    }
+
+    function updatePresentationCopy(state, failed, copy) {
+      if (failed) return { label: copy.updateRetry, detail: copy.updateRetry };
+      if (typeof state?.configurationError === 'string') return updateConfigurationCopy(state, copy);
+      const version = typeof state?.version === 'string' ? state.version : undefined;
+      switch (state?.phase) {
+        case 'available': {
+          const label = version === undefined
+            ? copy.updateAvailablePlain
+            : formatCopy(copy.updateAvailable, { version });
+          return { label, detail: label };
+        }
+        case 'downloading': {
+          const percent = Math.max(0, Math.min(100, Math.round(Number(state.percent) || 0)));
+          const label = formatCopy(copy.updateDownloading, { percent });
+          return {
+            label,
+            detail: version === undefined
+              ? label
+              : formatCopy(copy.updateDownloadingDetail, { percent, version }),
+          };
+        }
+        case 'verifying':
+          return { label: copy.updateVerifying, detail: copy.updateVerifying };
+        case 'installing':
+          return { label: copy.updateInstalling, detail: copy.updateInstalling };
+        case 'ready':
+          return {
+            label: copy.updateReady,
+            detail: version === undefined
+              ? copy.updateReady
+              : formatCopy(copy.updateReadyDetail, { version }),
+          };
+        case 'error':
+          return { label: copy.updateRetry, detail: updateFailureCopy(state, copy) };
+        default:
+          return { label: '', detail: '' };
+      }
+    }
+
+    /** One subscription shared by the rail button; null until the bridge answers. */
+    function useDesktopUpdate() {
+      const updates = React.useMemo(() => desktopUpdateBridge(), []);
+      const [view, setView] = React.useState({ state: undefined, failed: false });
+
+      React.useEffect(() => {
+        if (updates === undefined) return undefined;
+        let live = true;
+        let received = false;
+        const apply = (state) => {
+          if (!live) return;
+          received = true;
+          setView({ state, failed: false });
+        };
+        let unsubscribe;
+        try {
+          unsubscribe = updates.subscribe?.(apply);
+        } catch {
+          /* a bridge without a subscriber still gets the status probe */
+        }
+        Promise.resolve()
+          .then(() => updates.status())
+          .then(
+            (state) => {
+              if (live && !received) apply(state);
+            },
+            () => {
+              if (live && !received) setView({ state: undefined, failed: true });
+            },
+          );
+        return () => {
+          live = false;
+          try {
+            unsubscribe?.();
+          } catch {
+            /* already detached by the shell */
+          }
+        };
+      }, [updates]);
+
+      return { updates, ...view };
+    }
+
+    /**
+     * Desktop update entry above the settings gear. Available and ready are
+     * actionable; busy phases are a 3x3 dot-matrix animation; failures keep
+     * the same footprint with a danger tint and a retry glyph.
+     */
+    function IslandsUpdateButton() {
+      const { updates, state, failed } = useDesktopUpdate();
+      const [pending, setPending] = React.useState(false);
+      const enabled = useEnabled();
+      const lang = useLocale() ?? 'en';
+      const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      const configurationError = typeof state?.configurationError === 'string';
+      const phase = failed || configurationError ? 'error' : state?.phase;
+      if (!enabled || updates === undefined || phase === undefined || phase === 'idle') return null;
+      if (!['available', 'downloading', 'verifying', 'installing', 'ready', 'error'].includes(phase)) return null;
+
+      const clickable = phase === 'available' || phase === 'ready' || phase === 'error';
+      const busy = pending || phase === 'downloading' || phase === 'verifying' || phase === 'installing';
+      const { label, detail } = updatePresentationCopy(state, failed, copy);
+      const open = () => {
+        if (!clickable || pending) return;
+        setPending(true);
+        Promise.resolve()
+          .then(() => updates.open())
+          .catch(() => {})
+          .finally(() => setPending(false));
+      };
+
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: `isl-updateButton is-${phase}${clickable ? ' is-clickable' : ''}${pending ? ' is-pending' : ''}`,
+          'data-phase': phase,
+          'data-clickable': clickable ? 'true' : 'false',
+          title: detail,
+          'aria-label': label,
+          'aria-disabled': clickable ? undefined : 'true',
+          'aria-busy': busy ? 'true' : undefined,
+          onClick: open,
+        },
+        h(UpdateGlyph, { phase }),
+        phase === 'error' ? h('span', { className: 'isl-updateErrorDot', 'aria-hidden': true }) : null,
+      );
+    }
+
+    const UPDATE_SHOWCASE_PHASES = ['available', 'downloading', 'verifying', 'installing', 'ready', 'error'];
+    const UPDATE_STATE_LABELS = {
+      available: 'updateStateAvailable',
+      downloading: 'updateStateDownloading',
+      verifying: 'updateStateVerifying',
+      installing: 'updateStateInstalling',
+      ready: 'updateStateReady',
+      error: 'updateStateError',
+    };
+
+    /** Static, non-interactive copies of the rail button for the settings page. */
+    function IslandsUpdateShowcase({ copy }) {
+      return h(
+        'div',
+        { className: 'isl-updateShowcase' },
+        h(
+          'div',
+          { className: 'isl-updateShowcaseHead' },
+          h('div', { className: 'isl-updateShowcaseTitle' }, copy.updateShowcaseTitle),
+          h('div', { className: 'isl-updateShowcaseDesc' }, copy.updateShowcaseDesc),
+        ),
+        h(
+          'div',
+          { className: 'isl-updateShowcaseGrid' },
+          UPDATE_SHOWCASE_PHASES.map((phase) => {
+            const label = copy[UPDATE_STATE_LABELS[phase]] ?? phase;
+            return h(
+              'div',
+              { className: 'isl-updateShowcaseItem', key: phase },
+              h(
+                'div',
+                { className: 'isl-updateShowcaseStage' },
+                h(
+                  'span',
+                  {
+                    className: `isl-updateButton is-preview is-${phase}`,
+                    'data-phase': phase,
+                    title: label,
+                    'aria-hidden': 'true',
+                  },
+                  h(UpdateGlyph, { phase }),
+                  phase === 'error' ? h('span', { className: 'isl-updateErrorDot' }) : null,
+                ),
+              ),
+              h('div', { className: 'isl-updateShowcaseLabel' }, label),
+              h('div', { className: 'isl-updateShowcasePhase' }, phase),
+            );
+          }),
+        ),
       );
     }
 
@@ -1503,8 +1996,12 @@ window.__ModuleLoader__.load({
         if (settled) return;
         settled = true;
         stop();
-        setCompat({ status: 'missing', missing, forced: false });
-        console.warn('[islands-ui] interface anchors missing; the skin stayed off:', missing);
+        setCompat({ status: 'missing', missing, forced: false, version: shellVersion, dialect: shellDialect });
+        console.warn('[islands-ui] interface anchors missing; the skin stayed off:', {
+          version: shellVersion,
+          dialect: shellDialect,
+          missing,
+        });
         // Someone who already switched the skin off does not need a popup; the
         // settings page still carries the explanation.
         if (readStored()) showCompatibilityToast();
@@ -1514,13 +2011,25 @@ window.__ModuleLoader__.load({
         if (settled) return;
         settled = true;
         stop();
-        setCompat({ status: 'ok', missing: [], forced: false });
+        setCompat({ status: 'ok', missing: [], forced: false, version: shellVersion, dialect: shellDialect });
         activate();
       };
 
       const settle = () => {
         frameHandle = null;
         if (settled) return;
+        // The version map picks the stylesheet, but the DOM is the authority on
+        // what is actually rendered: if they disagree, trust the structure and
+        // swap the variant before the skin turns on.
+        const structure = detectShellDialect();
+        if (structure !== null && structure !== 'unknown' && structure !== shellDialect) {
+          console.warn('[islands-ui] shell structure differs from the reported version; selecting the matching stylesheet', {
+            version: shellVersion,
+            expected: shellDialect,
+            actual: structure,
+          });
+          applyStylesheet(structure);
+        }
         const missing = missingAnchors();
         if (missing.length === 0) {
           pass();
@@ -1583,7 +2092,9 @@ window.__ModuleLoader__.load({
       } catch {
         /* private mode: the choice still applies for this page. */
       }
-      setCompat({ status: 'ok', missing: [], forced: true });
+      const structure = detectShellDialect();
+      if (structure !== null && structure !== 'unknown') applyStylesheet(structure);
+      setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, dialect: shellDialect });
       activate();
     }
 
@@ -1680,6 +2191,19 @@ window.__ModuleLoader__.load({
             h('div', { className: 'isl-settingsPageDesc' }, copy.description),
           ),
         ),
+        h(
+          'div',
+          { className: 'isl-settingsMeta' },
+          h('span', null, copy.compatDetected),
+          h('code', { className: 'isl-settingsMetaValue' }, shellVersion ?? 'unknown'),
+          h('span', { className: 'isl-settingsMetaSeparator', 'aria-hidden': true }, '·'),
+          h('span', null, copy.compatStructure),
+          h(
+            'code',
+            { className: 'isl-settingsMetaValue' },
+            shellDialect === 'scroll' ? copy.compatStructureScroll : copy.compatStructureFlat,
+          ),
+        ),
         h(CompatibilityBanner, { copy, compat, onForce: forceEnable }),
         compat.forced ? h('div', { className: 'isl-compatForced' }, copy.compatForced) : null,
         h(
@@ -1751,6 +2275,9 @@ window.__ModuleLoader__.load({
             ),
           ),
         ),
+        // Preview hidden on request. The component and its styles stay in place;
+        // restore the next line to show the state gallery again.
+        // h(IslandsUpdateShowcase, { copy }),
       );
     }
 
@@ -1779,13 +2306,22 @@ window.__ModuleLoader__.load({
         slotsService = ctx.slots;
         applyAccent(readAccent());
 
+        // Pick the stylesheet before the first paint: the base sheet plus the
+        // variant of the release the client booted with. The compatibility gate
+        // verifies the mounted structure and can still swap it before the skin
+        // turns on.
+        shellVersion = readDshVersion();
+        shellDialect = dialectForVersion(shellVersion) ?? SHELL_FLAT;
+
         ctx.effect(() => {
           const tag = document.createElement('style');
           tag.dataset.plugin = 'dsh-islands-ui';
           tag.dataset.pluginCss = 'dsh-islands-ui/islands.css';
-          tag.textContent = CSS;
+          tag.textContent = stylesheetFor(shellDialect);
+          styleTag = tag;
           document.head.appendChild(tag);
           return () => {
+            styleTag = null;
             tag.remove();
             document.body?.removeAttribute(ATTRIBUTE);
           };
@@ -1879,6 +2415,10 @@ window.__ModuleLoader__.load({
 
           ctx.slots.inject('shell.overlay', () =>
             ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail-settings', order: -89 }, IslandsRailSettings),
+          );
+
+          ctx.slots.inject('shell.overlay', () =>
+            ctx.slots.register({ name: 'shell.overlay', id: 'islands-update', order: -87 }, IslandsUpdateButton),
           );
 
           ctx.slots.inject('shell.overlay', () =>
@@ -2008,7 +2548,9 @@ window.__ModuleLoader__.load({
         );
 
         if (isForced()) {
-          setCompat({ status: 'ok', missing: [], forced: true });
+          const structure = detectShellDialect();
+          if (structure !== null && structure !== 'unknown') applyStylesheet(structure);
+          setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, dialect: shellDialect });
           activate();
           return;
         }

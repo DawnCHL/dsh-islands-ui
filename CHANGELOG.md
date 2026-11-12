@@ -1,5 +1,26 @@
 # Changelog
 
+## 未发布
+
+### 兼容性
+
+- 客户端读取 `window.__DSH_BOOT__.release.version`，按 DSH 版本选择侧栏结构样式：新增 `scroll` 变体（`src/variants/scroll.css`），适配 0.2.2-rc.2 新增的 `.kB3qhq_scrollRegion` / `.kB3qhq_scrollArea` 包装层，修复工作区列表被挤进 48px 图标栏、工作区岛只剩空白卡片的问题。旧版 DSH 不会匹配变体选择器，仍走原样式。
+- 自检升级为「版本选样式 + 结构交叉验证」：版本选中的方言与挂载后的 DOM 不一致时以 DOM 为准切换变体；两者都不匹配才停用皮肤并弹出提示，避免再次静默半启用。
+- `panelEntryActive` 兼容 0.2.2-rc.2 的面板选中类名（`panelActive` 已移除）。
+- 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构。
+
+### 界面
+
+- 重写左下角桌面更新入口：隐藏原生「新版本」胶囊，改为设置齿轮上方的 36px 圆形按钮，展开与收起侧栏都可见。
+- 更新状态直接订阅 `window.dshDesktop.updates`：发现新版本显示蓝色实心圆 + 下载箭头，就绪显示重启图标，失败显示半透明红底、红色描边、状态点与重试图标。
+- 下载、校验、安装不再使用圆形底色，直接用皮肤强调色绘制 3×3 点阵动画（Column Flux / Smiley Spin / Core Echo），并支持 `prefers-reduced-motion` 静态回退。
+- 更新入口按 DSH 版本动态读取展示数据：0.2.2-rc.2 新增的 `configurationError`（配置读取/格式/channel/清理失败）复用错误态与重试图标，旧版没有该字段时行为不变。
+- 设置 → Islands UI 的「更新按钮状态」预览卡暂时隐藏；组件与样式保留，取消 `client.template.js` 中对应渲染行的注释即可恢复。
+
+### 文档
+
+- 新增三张 3:4 宣传图（封面、亮暗主题、三步安装），中英文 README 各加一节展示；`screenshots.json` 改为这三张，商店预览同步更新，原有的界面截图仍保留在 README 的「界面预览」中。
+
 ## 1.0.3 — 2026-11-12
 
 ### 发布
