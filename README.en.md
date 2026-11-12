@@ -154,11 +154,14 @@ The module loader cannot read package files at runtime, so `client.js` must cont
 | `.github/workflows/publish.yml` | Publishes on a `v*` tag or manual dispatch; the tag must match `package.json`, and `NPM_TOKEN` is required |
 | `.github/ISSUE_TEMPLATE/` | Bug and feature forms that require the DSH version, platform and reproduction steps |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Build, wide/narrow layout, dark mode and local-path checks |
+| `.github/dependabot.yml` | Weekly GitHub Actions version updates |
 | `.editorconfig` / `.gitattributes` | UTF-8, LF, 2-space indentation; images and tarballs are binary |
 | `.nvmrc` | Node 24 for local development |
 | `CONTRIBUTING.md` | Development, build, commit conventions and PR checklist |
 | `SECURITY.md` | Supported versions and the private vulnerability-reporting flow |
 | `scripts/check-package.mjs` | Pre-publish validation of the manifest, row name, client build, screenshots and `files[]` |
+
+Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs and resolved conversations, with force pushes disabled; `v*` tags cannot be deleted or moved; fork PRs from external contributors need maintainer approval.
 
 ---
 

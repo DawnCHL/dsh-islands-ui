@@ -25,3 +25,4 @@
 - 新增 awesome-dsh-plugin 收录模板与 npm / DSHHub / dsh-market 发布说明。
 - README 补充安装、常见问题、仓库配置、贡献与安全说明；新增英文 FAQ。
 - 新增 GitHub Actions CI / Publish 工作流、Issue / PR 模板、`CONTRIBUTING.md`、`SECURITY.md`、`.editorconfig`、`.gitattributes` 和 `.nvmrc`。
+- 启用 `main` 分支保护、`v*` tag 保护、外部 fork PR 审批和 Dependabot（GitHub Actions）。
