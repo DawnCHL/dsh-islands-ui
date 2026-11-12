@@ -1063,6 +1063,109 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /** One pinned row: hover reveals unpin + locate, and a clipped title marquees. */
+    function PinnedRow({ session, copy, pinIcon }) {
+      const titleRef = React.useRef(null);
+      const frameRef = React.useRef(0);
+      const revealingRef = React.useRef(false);
+      const id = session.id ?? session.sessionId;
+      const title = String(session.title ?? '').trim() || copy.untitled;
+
+      React.useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
+
+      const place = (left, range) => {
+        const element = titleRef.current;
+        if (element === null) return;
+        if (typeof element.scrollTo === 'function') element.scrollTo({ left, behavior: 'instant' });
+        else element.scrollLeft = left;
+        if (left > 0) element.dataset.scrolled = '';
+        else delete element.dataset.scrolled;
+        if (left < range) element.dataset.clipped = '';
+        else delete element.dataset.clipped;
+      };
+
+      const enter = (event) => {
+        if (event?.pointerType === 'touch') return;
+        if (titleRef.current === null || revealingRef.current) return;
+        revealingRef.current = true;
+        cancelAnimationFrame(frameRef.current);
+        // Measure after hover has laid out the two action buttons; otherwise
+        // the title still has its resting width and the marquee never starts.
+        frameRef.current = requestAnimationFrame(() => {
+          const element = titleRef.current;
+          if (element === null) return;
+          const range = element.scrollWidth - element.clientWidth;
+          if (range <= 8) return;
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            place(range, range);
+            return;
+          }
+          let previous;
+          let position = 0;
+          const step = (now) => {
+            position += previous === undefined ? 0 : (now - previous) * 0.03;
+            previous = now;
+            place(Math.min(position, range), range);
+            if (position < range) frameRef.current = requestAnimationFrame(step);
+          };
+          frameRef.current = requestAnimationFrame(step);
+        });
+      };
+
+      const leave = () => {
+        revealingRef.current = false;
+        cancelAnimationFrame(frameRef.current);
+        place(0, 0);
+      };
+
+      return h(
+        'div',
+        {
+          className: 'isl-pinnedRow',
+          role: 'button',
+          tabIndex: 0,
+          title,
+          onClick: () => uiWorkspaceService?.openSession(id),
+          onKeyDown: (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            uiWorkspaceService?.openSession(id);
+          },
+          onPointerEnter: enter,
+          onPointerLeave: leave,
+        },
+        h('span', { className: 'isl-pinnedName', ref: titleRef }, title),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'isl-pinnedPinBtn',
+            title: copy.unpin,
+            'aria-label': copy.unpin,
+            onClick: (event) => {
+              event.stopPropagation();
+              workspacesService?.unpinSession?.(id).catch?.(() => {});
+            },
+          },
+          pinIcon,
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'isl-pinnedLocate',
+            title: copy.locate,
+            'aria-label': copy.locate,
+            onClick: (event) => {
+              event.stopPropagation();
+              revealPinnedSession(id, title);
+            },
+          },
+          h(LocateGlyph),
+        ),
+      );
+    }
+
     /**
      * Aggregate pinned sessions above the workspace groups. The block lives
      * in a host div inserted before the DSH workspace list, so it participates
@@ -1151,55 +1254,14 @@ window.__ModuleLoader__.load({
             : h(
                 'div',
                 { className: 'isl-pinnedList' },
-                rows.map((session) => {
-                  const id = session.id ?? session.sessionId;
-                  const title = String(session.title ?? '').trim() || copy.untitled;
-                  return h(
-                    'div',
-                    {
-                      key: id,
-                      className: 'isl-pinnedRow',
-                      role: 'button',
-                      tabIndex: 0,
-                      title,
-                      onClick: () => uiWorkspaceService?.openSession(id),
-                      onKeyDown: (event) => {
-                        if (event.key !== 'Enter' && event.key !== ' ') return;
-                        event.preventDefault();
-                        uiWorkspaceService?.openSession(id);
-                      },
-                    },
-                    h('span', { className: 'isl-pinnedName' }, title),
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        className: 'isl-pinnedPinBtn',
-                        title: copy.unpin,
-                        'aria-label': copy.unpin,
-                        onClick: (event) => {
-                          event.stopPropagation();
-                          workspacesService?.unpinSession?.(id).catch?.(() => {});
-                        },
-                      },
-                      pinIcon,
-                    ),
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        className: 'isl-pinnedLocate',
-                        title: copy.locate,
-                        'aria-label': copy.locate,
-                        onClick: (event) => {
-                          event.stopPropagation();
-                          revealPinnedSession(id, title);
-                        },
-                      },
-                      h(LocateGlyph),
-                    ),
-                  );
-                }),
+                rows.map((session) =>
+                  h(PinnedRow, {
+                    key: session.id ?? session.sessionId,
+                    session,
+                    copy,
+                    pinIcon,
+                  }),
+                ),
               ),
         ),
         host,

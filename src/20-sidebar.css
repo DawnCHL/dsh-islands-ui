@@ -434,7 +434,7 @@ body[data-islands-ui] .JoiKIa_sessionRow:has(.JoiKIa_pinIndicator):hover {
   gap: 6px;
   width: 100%;
   height: 32px;
-  padding: 0 8px 0 26px;
+  padding: 0 8px 0 34px;
   border: 0;
   border-radius: var(--isl-radius-sm);
   background: transparent;
@@ -453,9 +453,26 @@ body[data-islands-ui] .JoiKIa_sessionRow:has(.JoiKIa_pinIndicator):hover {
 .isl-pinnedName {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* Hover marquee: clip the ellipsis, fade both edges as the title crawls. */
+.isl-pinnedRow:hover .isl-pinnedName {
+  text-overflow: clip;
+}
+
+.isl-pinnedRow .isl-pinnedName[data-scrolled] {
+  mask-image: linear-gradient(90deg, #0000, #000 12px);
+}
+
+.isl-pinnedRow .isl-pinnedName[data-clipped] {
+  mask-image: linear-gradient(270deg, #0000, #000 12px);
+}
+
+.isl-pinnedRow .isl-pinnedName[data-scrolled][data-clipped] {
+  mask-image: linear-gradient(90deg, #0000, #000 12px calc(100% - 12px), #0000);
 }
 
 .isl-pinnedRow:focus-visible {
@@ -465,7 +482,7 @@ body[data-islands-ui] .JoiKIa_sessionRow:has(.JoiKIa_pinIndicator):hover {
 
 .isl-pinnedPinBtn,
 .isl-pinnedLocate {
-  display: grid;
+  display: none;
   place-items: center;
   flex: none;
   width: 24px;
@@ -476,11 +493,8 @@ body[data-islands-ui] .JoiKIa_sessionRow:has(.JoiKIa_pinIndicator):hover {
   border-radius: var(--isl-radius-xs, 6px);
   background: transparent;
   color: var(--dsw-alias-label-tertiary);
-  opacity: 0;
-  pointer-events: none;
   cursor: pointer;
   transition:
-    opacity 0.12s var(--ds-ease-in-out),
     background-color 0.12s var(--ds-ease-in-out),
     color 0.12s var(--ds-ease-in-out);
 }
@@ -491,8 +505,7 @@ body[data-islands-ui] .JoiKIa_sessionRow:has(.JoiKIa_pinIndicator):hover {
 .isl-pinnedRow:hover .isl-pinnedLocate,
 .isl-pinnedRow:focus-within .isl-pinnedLocate,
 .isl-pinnedLocate:focus-visible {
-  opacity: 1;
-  pointer-events: auto;
+  display: grid;
 }
 
 .isl-pinnedPinBtn:hover,
