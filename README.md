@@ -9,7 +9,7 @@
     <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
     <a href="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml/badge.svg" /></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/dsh-islands-ui?style=flat-square" /></a>
-    <img alt="DSH" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.1-4f7cff?style=flat-square" />
+    <img alt="DSH" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.2-4f7cff?style=flat-square" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-3b3b3b?style=flat-square" />
     <img alt="Windows/Linux" src="https://img.shields.io/badge/Windows%2FLinux-untested-orange?style=flat-square" />
   </p>
@@ -35,13 +35,23 @@ dsh plugin --profile web add dsh-islands-ui
 
 安装后刷新页面（`⌘R` / `Ctrl+R`）。皮肤默认开启；可在 **设置 → Islands UI** 关闭，关闭后立即恢复 Harness 默认外观，偏好和强调色会保留。
 
-> 适用于 DSH `0.2.2-rc.1` 及 `0.2.x` 后续版本。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
+> 适用于 DSH `0.2.2-rc.1` 与 `0.2.2-rc.2`。客户端会读取运行中的 DSH 版本（`window.__DSH_BOOT__.release.version`），自动选用对应的侧栏结构样式；更早的 `0.2.x` 构建回退到基础样式。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
 
 ### 卸载
 
 ```bash
 dsh plugin --profile desktop remove dsh-islands-ui
 ```
+
+---
+
+## 宣传图
+
+<p align="center">
+  <img src="assets/promo-cover.png" width="32%" alt="Islands UI 宣传图：更现代的界面，更完整的交互" />
+  <img src="assets/promo-themes.png" width="32%" alt="Islands UI 宣传图：亮暗主题，自由选择" />
+  <img src="assets/promo-install.png" width="32%" alt="Islands UI 宣传图：三步安装" />
+</p>
 
 ---
 
@@ -64,6 +74,7 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | ⚙️ | **独立设置页** | 设置 → Islands UI：一键开关皮肤、强调色（预设 + 自定义 + 跟随主题） |
 | 📌 | **置顶聚合** | 置顶会话同时保留在原工作区，并聚合到「新会话」与「工作区」标题之间；分类可折叠 |
 | 🌙 | **深色模式** | 完整深色 token：近黑画布、深灰岛屿、白色透明交互层与深色阴影 |
+| 🔄 | **桌面更新入口** | 设置齿轮上方常驻；发现新版本、下载、校验、安装与失败各有独立状态，加载态使用强调色 3×3 点阵动效 |
 | ⌨️ | **快捷键** | `⌘B` 折叠工作区、`⌥⌘B` 右侧栏、`⌘,` 设置、`⌘⇧M` 模型弹层；按钮悬停显示当前键位 |
 
 皮肤是纯客户端样式层；左侧栏插件固定、置顶聚合、定位与设置页也都在浏览器端完成，不新增 host 工具、服务或会话数据。
@@ -185,10 +196,11 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 
 - 皮肤是**纯客户端样式层**，不替换会话、设置或插件的数据与交互；左侧栏插件固定、置顶聚合、定位等额外能力也只在客户端完成。
 - 选择器依赖 Harness 当前构建的 CSS Module 哈希类名（如 `PIRFFq_*`、`kB3qhq_*`、`JoiKIa_*`、`_77Pn0W_*`）与少量 `data-*` 挂点；**Harness 升级或重新构建后类名可能变化，需要同步更新对应 CSS**。
-- 启动时会检测三个界面锚点（`.PIRFFq_frame`、`.PIRFFq_centerCol`、`.kB3qhq_root`）：缺失就**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。
+- 启动时检测界面骨架锚点（`.PIRFFq_frame`、`.PIRFFq_centerCol`、`.kB3qhq_root`）并校验侧栏结构方言：先按 DSH 版本注入对应样式，再用挂载后的 DOM 交叉验证（`flat` / `scroll`），两者不一致时以 DOM 为准切换样式；结构无法识别时才**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。
+- 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构，便于排查升级后的样式问题。
 - 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
 - Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
-- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的构建差异由启动时的锚点自检兜底。`skin.json` 为主题管理器提供 id、强调色和挂载行。
+- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的结构差异由客户端按版本选择的样式变体处理，变体未覆盖的新结构会触发上述自检降级。`skin.json` 为主题管理器提供 id、强调色和挂载行。
 
 ---
 

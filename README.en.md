@@ -32,7 +32,7 @@ dsh plugin --profile web add dsh-islands-ui
 
 Then refresh (`⌘R` / `Ctrl+R`). The skin is enabled by default. Turn it off at **Settings → Islands UI** to restore the stock appearance immediately; your preference and accent are kept.
 
-> Requires DeepSeek Harness `0.2.2-rc.1` or newer within the `0.2.x` line. The package declares `dsh.bundle` + `dsh.client`, so `dsh plugin add` installs and mounts it without editing the profile by hand.
+> Requires DeepSeek Harness `0.2.2-rc.1` or `0.2.2-rc.2`. The client reads the running release (`window.__DSH_BOOT__.release.version`) and injects the sidebar structure stylesheet for that build; older `0.2.x` builds fall back to the base stylesheet. The package declares `dsh.bundle` + `dsh.client`, so `dsh plugin add` installs and mounts it without editing the profile by hand.
 
 ### Uninstall
 
@@ -51,6 +51,7 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color and follow-theme |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
 | 🌙 | **Dark mode** | Full dark token set: near-black canvas, dark islands, translucent interaction layers |
+| 🔄 | **Desktop update entry** | Pinned above the settings gear; distinct states for available, downloading, verifying, installing and failure, with accent-colored 3×3 dot-matrix loaders |
 | ⌨️ | **Shortcuts** | `⌘B`, `⌥⌘B`, `⌘,`, `⌘⇧M`; buttons show the current binding on hover |
 
 The skin is a client-only style layer. Pinning helpers, the pinned shelf and the settings page are also implemented in the browser bundle; no host tool, service or session data is added.
@@ -80,6 +81,16 @@ The skin is a client-only style layer. Pinning helpers, the pinned shelf and the
 On Windows the native title bar stays in place and the custom strip sits below it; `--dsh-windows-titlebar-height` is respected. Linux follows native window decorations, which vary by desktop environment.
 
 If you hit a title-bar, drag-region, window-button or layout issue, please open an [issue](https://github.com/DawnCHL/dsh-islands-ui/issues) with your OS version, window size and a screenshot.
+
+---
+
+## Key visuals
+
+<p align="center">
+  <img src="assets/promo-cover.png" width="32%" alt="Islands UI key visual: a more modern interface, more complete interactions" />
+  <img src="assets/promo-themes.png" width="32%" alt="Islands UI key visual: light and dark themes" />
+  <img src="assets/promo-install.png" width="32%" alt="Islands UI key visual: install in three steps" />
+</p>
 
 ---
 
@@ -114,6 +125,7 @@ src/
   10-shell.css         three-column shell → canvas + islands
   15-topbar.css        window top bar
   16-rail.css          left icon rail, plugin pin menu, settings gear
+  17-update.css        desktop update entry, state styles, 3×3 dot-matrix loaders
   20-sidebar.css       workspace island, pinned shelf, session row states
   30-conversation.css  conversation page, composer, top tool group
   40-settings.css      settings dialog and section shell
@@ -169,10 +181,11 @@ Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs a
 
 - The skin is a pure client style layer and does not replace session, settings or plugin data or behavior.
 - Selectors depend on the current Harness build's CSS Module hashes (e.g. `PIRFFq_*`, `kB3qhq_*`, `JoiKIa_*`, `_77Pn0W_*`) and a few `data-*` hooks. A Harness upgrade or rebuild can change those class names and require a matching CSS update.
-- On startup the plugin verifies three layout anchors (`.PIRFFq_frame`, `.PIRFFq_centerCol`, `.kB3qhq_root`). If any is missing the skin stays **off**, DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway".
+- On startup the plugin verifies the layout anchors (`.PIRFFq_frame`, `.PIRFFq_centerCol`, `.kB3qhq_root`) and the sidebar structure dialect: it injects the stylesheet for the reported DSH release, then cross-checks it against the mounted DOM (`flat` / `scroll`) and switches the variant when the two disagree. Only a structure it cannot recognize leaves the skin **off**; DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway".
+- Settings → Islands UI shows the detected DSH release and sidebar structure for support triage.
 - Dark mode follows `data-ds-dark-theme`; the accent remaps `--dsw-alias-state-business-primary`, so it affects both the skin and native buttons.
 - Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height`; Linux currently follows native window decorations.
-- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade, while build-to-build drift inside the line is caught by the startup anchor check. `skin.json` gives theme managers the id, accent and mount row.
+- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade, while structure drift inside the line is handled by the version-selected style variants and, for an unrecognized structure, by the startup gate above. `skin.json` gives theme managers the id, accent and mount row.
 
 ---
 
