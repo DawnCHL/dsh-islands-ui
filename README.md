@@ -7,6 +7,8 @@
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="npm" src="https://img.shields.io/npm/v/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="downloads" src="https://img.shields.io/npm/dm/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
+    <a href="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml/badge.svg" /></a>
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/dsh-islands-ui?style=flat-square" /></a>
     <img alt="DSH" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.1-4f7cff?style=flat-square" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-3b3b3b?style=flat-square" />
     <img alt="Windows/Linux" src="https://img.shields.io/badge/Windows%2FLinux-untested-orange?style=flat-square" />
@@ -160,6 +162,20 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 | `screenshots.json` | 商店读取的 1–8 张仓库相对路径截图 |
 | `assets/` | 商店图标与 README 截图 |
 
+### 仓库配置
+
+| 文件 | 作用 |
+| --- | --- |
+| `.github/workflows/ci.yml` | PR / main 上跑 `npm run check` 和 `npm pack --dry-run`，Node 20 / 22 / 24 矩阵 |
+| `.github/workflows/publish.yml` | 推送 `v*` tag 或手动触发发布；tag 必须与 `package.json` 版本一致，使用 `NPM_TOKEN` secret |
+| `.github/ISSUE_TEMPLATE/` | Bug / Feature 表单，强制填写 DSH 版本、平台和复现步骤 |
+| `.github/PULL_REQUEST_TEMPLATE.md` | PR 自检：构建、宽窄屏、深色模式、无本地路径 |
+| `.editorconfig` / `.gitattributes` | 统一 UTF-8、LF、2 空格；图片和 tarball 按二进制处理 |
+| `.nvmrc` | 本地开发使用 Node 24 |
+| `CONTRIBUTING.md` | 开发、构建、提交约定和 PR 清单 |
+| `SECURITY.md` | 支持版本与私密漏洞报告流程 |
+| `scripts/check-package.mjs` | 包里 manifest、row name、client 构建、截图和 `files[]` 的发布前校验 |
+
 ---
 
 ## 发布与商店
@@ -176,10 +192,12 @@ npm publish --access public
 
 商店覆盖：
 
-- **npm** — 安装源；包名 [`dsh-islands-ui`](https://www.npmjs.com/package/dsh-islands-ui)
-- **DSHHub** — 自动发现带合法 `dsh.bundle` manifest 的 npm 包，发布后无需额外操作
+- **npm** — 安装源；包名 [`dsh-islands-ui`](https://www.npmjs.com/package/dsh-islands-ui)，用 `npm view dsh-islands-ui version` 确认线上版本
+- **DSHHub** — 自动发现带合法 `dsh.bundle` manifest 的 npm 包，发布后无需额外操作；可在 Hub 用 GitHub App 认领条目
 - **awesome-dsh-plugin / dsh-market** — 用 [docs/awesome-dsh-plugin.yml](docs/awesome-dsh-plugin.yml) 里的 `theme` 条目提 PR；合并后 dsh-market 的「主题」Tab 会自动收录
 - **dsh-market** — 直接读取 awesome-dsh-plugin 的 `theme` 分类
+
+> awesome-dsh-plugin 要求仓库创建满 **1 天**、带 `dsh-plugin` topic，并且根 `package.json` 声明 `dsh.bundle`。先完成 npm 发布，满足仓库年龄要求后再提交 `theme` 条目，避免被 CI 打回。
 
 ---
 
@@ -193,11 +211,45 @@ npm publish --access public
 
 ---
 
-## 反馈
+## 常见问题
 
+**安装后没有变化？**
+
+先确认当前 profile 里插件是启用状态，并刷新页面（`⌘R` / `Ctrl+R`）。本地开发版还需要确认 `client.js` 已经重新构建；从 npm 安装则检查 `npm view dsh-islands-ui version` 与已安装版本是否一致。DSH 版本低于 `0.2.2-rc.1` 时不会加载。
+
+**会修改我的会话、设置或插件数据吗？**
+
+不会。皮肤只注入样式并注册浏览器端插槽；左侧栏固定、置顶聚合、定位和强调色都存在 `localStorage` 里，不写会话或 profile 数据。
+
+**怎么彻底恢复默认外观？**
+
+设置 → Islands UI 关闭总开关即可立即恢复。需要连偏好一起清空时，删除 `dsh-islands-ui:*` 这几个 `localStorage` key（见[状态存储](#状态存储)）。
+
+**可以和别的主题/皮肤同时开吗？**
+
+不建议。两个皮肤会同时改同一批 `--dsw-*` token 和布局，后加载的会覆盖前一个。dsh-market 的「主题」Tab 本身按单主题激活管理；如果你手动装了多个，保留一个即可。
+
+**为什么某些界面还是旧样式？**
+
+皮肤依赖 Harness 当前构建的 CSS Module 哈希类名。DSH 升级后类名可能变化，导致部分规则失效；请更新到最新版 Islands UI，或带截图和 DSH 版本开 Issue。
+
+**Windows / Linux 能用吗？**
+
+已按自定义顶栏、左侧栏、右侧栏开关和标题栏高度适配，但还没有在真实 Windows / Linux 机器上实测。遇到标题栏、拖拽区或窗口按钮问题，欢迎按 Issue 模板反馈。
+
+**会发到插件商店吗？**
+
+npm 发布后 DSHHub 会自动发现；dsh-market 的「主题」Tab 读取 awesome-dsh-plugin 目录，需要仓库满足收录条件后提交一条 `theme` 条目。具体步骤见 [docs/publishing.md](docs/publishing.md)。
+
+---
+
+## 贡献与安全
+
+- 开发、构建、提交约定和 PR 清单：[CONTRIBUTING.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/CONTRIBUTING.md)
 - Bug / 兼容性问题：[Issues](https://github.com/DawnCHL/dsh-islands-ui/issues)
 - 改进或新功能：欢迎直接开 PR
 - 特别欢迎 Windows / Linux 的实测反馈（截图 + 系统版本 + 窗口尺寸）
+- 安全漏洞：不要开公开 Issue，按 [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md) 走私密报告
 
 ## License
 

@@ -12,19 +12,23 @@ npm pack --dry-run
 ## 1. 发布到 npm
 
 ```bash
-npm login
-npm whoami                 # 确认登录的是准备发布该包的账号
+npm login --registry=https://registry.npmjs.org/
+npm whoami --registry=https://registry.npmjs.org/   # 当前发布账号
 npm publish --access public
 ```
 
 包内 `publishConfig.registry` 已固定为 `https://registry.npmjs.org/`。本机 npm 配置指向 `registry.npmmirror.com` 也没关系，`publishConfig` 会覆盖它；npmmirror 是只读镜像，不能直接发布。
 
-发布后确认：
+如果账号开了 2FA，`npm publish` 会要求输入一次性验证码。发布后确认：
 
 ```bash
 npm view dsh-islands-ui version
 npm view dsh-islands-ui dist.tarball
+npm view dsh-islands-ui dist.integrity
+npm view dsh-islands-ui time
 ```
+
+首次发布成功后，仓库里的 `.github/workflows/publish.yml` 可以在推送 `v*` tag 或手动触发时复用它；需要在 GitHub 仓库设置里添加 `NPM_TOKEN` secret（或改用 npm Trusted Publishing）。
 
 ## 2. 本地安装验证
 
@@ -74,6 +78,8 @@ data/plugins/DawnCHL__dsh-islands-ui.yml
 - 仓库需要加 GitHub topic `dsh-plugin`，且仓库创建满 1 天；
 - 截图已经在仓库根的 `screenshots.json` 里声明，不需要再往 awesome 仓库提交截图。
 
+> **当前先不要提交这个 PR。** 仓库创建未满 1 天时 CI 会直接拒绝；先完成 npm 发布和本地验证，等仓库满 1 天、加上 `dsh-plugin` topic 后再复制条目提交。提交前用 `git log -1 --format=%cd --date=iso` 或 GitHub 仓库页确认创建时间。
+
 合并后网站会自动重建，dsh-market 下一次拉取目录时即可看到。
 
 ## 5. 发布检查清单
@@ -86,7 +92,9 @@ data/plugins/DawnCHL__dsh-islands-ui.yml
 - [ ] `skin.json` 的 `package` / `wiring.id` 与包名、row id 一致
 - [ ] 本地 tarball 安装、刷新、重启均正常
 - [ ] npm 发布后 `npm view dsh-islands-ui version` 正确
+- [ ] CI（`.github/workflows/ci.yml`）在 Node 20 / 22 / 24 上通过
 - [ ] awesome-dsh-plugin PR 只新增 `data/plugins/DawnCHL__dsh-islands-ui.yml`
+- [ ] 提交 awesome-dsh-plugin 前确认仓库已创建满 1 天、已加 `dsh-plugin` topic
 
 ## 6. 版本与回滚
 

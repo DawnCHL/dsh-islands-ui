@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安装与使用说明
+    url: https://github.com/DawnCHL/dsh-islands-ui#安装
+    about: 安装、卸载、状态存储和常见问题
+  - name: 发布与商店收录
+    url: https://github.com/DawnCHL/dsh-islands-ui/blob/main/docs/publishing.md
+    about: npm 发布、DSHHub 自动收录、awesome-dsh-plugin 收录步骤
+  - name: 安全报告
+    url: https://github.com/DawnCHL/dsh-islands-ui/security/advisories/new
+    about: 请勿用公开 Issue 报告安全问题

@@ -1,0 +1,95 @@
+name: Bug report
+description: 报告 Islands UI 的显示、布局或交互问题
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先确认皮肤已开启（设置 → Islands UI），并尝试刷新页面。
+        如果是 Harness 本身或其他插件的问题，请提到对应仓库。
+
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DeepSeek Harness 版本
+      description: 设置 → 关于，或运行 `dsh --version`
+      placeholder: 0.2.2-rc.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: window-size
+    attributes:
+      label: 窗口尺寸
+      description: 如果是窄屏/抽屉问题，请写清窗口宽度
+      placeholder: 例如 1440×900，或窄屏 600×900
+    validations:
+      required: false
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Islands UI 版本
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？期望是什么？
+      placeholder: 描述问题、复现步骤和期望结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 ...
+        2. 点击 ...
+        3. 看到 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或录屏
+      description: 拖拽图片到这里；窄屏问题请附宽屏和窄屏各一张
+    validations:
+      required: false
+
+  - type: textarea
+    id: console
+    attributes:
+      label: 控制台错误
+      description: 如果有报错，请粘贴开发者工具 Console 里的相关行
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 确认
+      options:
+        - label: 我已在最新版本上复现
+          required: true
+        - label: 我已确认皮肤处于开启状态
+          required: true

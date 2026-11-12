@@ -6,6 +6,8 @@
   <p>
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="npm" src="https://img.shields.io/npm/v/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
+    <a href="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml/badge.svg" /></a>
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/dsh-islands-ui?style=flat-square" /></a>
     <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-4f7cff?style=flat-square" />
   </p>
 </div>
@@ -144,6 +146,20 @@ The module loader cannot read package files at runtime, so `client.js` must cont
 | `screenshots.json` | 1–8 repository-relative screenshots read by storefronts |
 | `assets/` | Store icon and README screenshots |
 
+### Repository configuration
+
+| File | Purpose |
+| --- | --- |
+| `.github/workflows/ci.yml` | Runs `npm run check` and `npm pack --dry-run` on PRs / main across Node 20, 22 and 24 |
+| `.github/workflows/publish.yml` | Publishes on a `v*` tag or manual dispatch; the tag must match `package.json`, and `NPM_TOKEN` is required |
+| `.github/ISSUE_TEMPLATE/` | Bug and feature forms that require the DSH version, platform and reproduction steps |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Build, wide/narrow layout, dark mode and local-path checks |
+| `.editorconfig` / `.gitattributes` | UTF-8, LF, 2-space indentation; images and tarballs are binary |
+| `.nvmrc` | Node 24 for local development |
+| `CONTRIBUTING.md` | Development, build, commit conventions and PR checklist |
+| `SECURITY.md` | Supported versions and the private vulnerability-reporting flow |
+| `scripts/check-package.mjs` | Pre-publish validation of the manifest, row name, client build, screenshots and `files[]` |
+
 ---
 
 ## Publishing
@@ -160,10 +176,12 @@ The package targets `https://registry.npmjs.org/` explicitly in `publishConfig`,
 
 Store coverage:
 
-- **npm** — canonical install source; [dsh-islands-ui](https://www.npmjs.com/package/dsh-islands-ui)
-- **DSHHub** — discovers npm packages with a valid `dsh.bundle` manifest automatically
+- **npm** — canonical install source; [dsh-islands-ui](https://www.npmjs.com/package/dsh-islands-ui). Confirm with `npm view dsh-islands-ui version`
+- **DSHHub** — discovers npm packages with a valid `dsh.bundle` manifest automatically; claim the listing with the GitHub App
 - **awesome-dsh-plugin / dsh-market** — submit the ready-to-copy `theme` entry in [docs/awesome-dsh-plugin.yml](docs/awesome-dsh-plugin.yml)
 - **dsh-market Themes tab** — follows the `theme` category from awesome-dsh-plugin
+
+> awesome-dsh-plugin requires a repository at least **1 day old**, the `dsh-plugin` topic, and a root `package.json` with `dsh.bundle`. Publish to npm first, then submit the `theme` entry once the repository age requirement is met.
 
 ---
 
@@ -177,10 +195,44 @@ Store coverage:
 
 ---
 
-## Feedback
+## FAQ
 
+**Nothing changed after install.**
+
+Check that the plugin is enabled in the current profile and refresh (`⌘R` / `Ctrl+R`). For a local checkout, make sure `client.js` was rebuilt; for npm, compare `npm view dsh-islands-ui version` with the installed version. DSH versions below `0.2.2-rc.1` are not supported.
+
+**Does it touch my sessions or settings?**
+
+No. The skin injects CSS and registers browser-side slots only. Rail pins, the pinned shelf, locate state and accent live in `localStorage`; no session or profile data is written.
+
+**How do I fully reset the skin?**
+
+Turn off **Settings → Islands UI**. To clear the saved preferences too, delete the `dsh-islands-ui:*` localStorage keys (see [State](#state)).
+
+**Can I run it with another theme?**
+
+Not recommended. Two skins write the same `--dsw-*` tokens and layout rules, so the last one loaded wins. dsh-market's Themes tab enforces one active theme; if you installed several manually, keep one.
+
+**Why do some surfaces keep the old look?**
+
+Selectors depend on Harness CSS Module hashes. A DSH upgrade can rename them and disable individual rules. Update Islands UI, or open an issue with a screenshot and DSH version.
+
+**Windows / Linux?**
+
+The top bar, rail, right-panel toggle and title-bar height are adapted, but neither has been tested on a physical machine. Please report title-bar, drag-region or window-button issues using the issue template.
+
+**Will it be in plugin stores?**
+
+DSHHub discovers npm packages automatically. dsh-market's Themes tab reads the awesome-dsh-plugin catalog; submit the `theme` entry once the repository meets the listing requirements. See [docs/publishing.md](docs/publishing.md).
+
+---
+
+## Contributing and security
+
+- Development, build, commit conventions and PR checklist: [CONTRIBUTING.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/CONTRIBUTING.md)
 - Bugs / compatibility: [Issues](https://github.com/DawnCHL/dsh-islands-ui/issues)
 - Improvements: PRs welcome
 - Windows / Linux test reports especially welcome (screenshot + OS version + window size)
+- Security issues: do not open a public issue; follow [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md)
 
 <p align="center"><sub>Made for DeepSeek Harness · Islands UI</sub></p>
