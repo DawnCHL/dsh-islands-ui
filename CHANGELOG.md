@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3 — 2026-11-12
+
+### 发布
+
+- npm 发布链路改用 npm Trusted Publishing（GitHub Actions OIDC）：发布时由 npm 用 workflow 的 OIDC 身份换取短期凭据，仓库不再保存长期 `NPM_TOKEN`。本版本无功能变更，仅用于验证 OIDC 发布链路。
+
 ## 1.0.2 — 2026-11-12
 
 ### 修复

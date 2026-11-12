@@ -42,6 +42,7 @@ jobs:
           node -e "const p=require('./package.json'); const tag=process.env.GITHUB_REF_NAME; if (tag !== 'v'+p.version) { console.error('tag '+tag+' does not match package version v'+p.version); process.exit(1); }"
 
       - name: Publish
+        # Trusted Publishing: npm exchanges the workflow's OIDC token for a
+        # short-lived publish credential, so no long-lived NPM_TOKEN secret is
+        # needed. `--provenance` signs the tarball with the same identity.
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
