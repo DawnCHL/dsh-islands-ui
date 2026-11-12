@@ -170,11 +170,14 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 | `.github/workflows/publish.yml` | 推送 `v*` tag 或手动触发发布；tag 必须与 `package.json` 版本一致，使用 `NPM_TOKEN` secret |
 | `.github/ISSUE_TEMPLATE/` | Bug / Feature 表单，强制填写 DSH 版本、平台和复现步骤 |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR 自检：构建、宽窄屏、深色模式、无本地路径 |
+| `.github/dependabot.yml` | 每周检查 GitHub Actions 版本更新 |
 | `.editorconfig` / `.gitattributes` | 统一 UTF-8、LF、2 空格；图片和 tarball 按二进制处理 |
 | `.nvmrc` | 本地开发使用 Node 24 |
 | `CONTRIBUTING.md` | 开发、构建、提交约定和 PR 清单 |
 | `SECURITY.md` | 支持版本与私密漏洞报告流程 |
 | `scripts/check-package.mjs` | 包里 manifest、row name、client 构建、截图和 `files[]` 的发布前校验 |
+
+仓库设置：`main` 需要 PR、CI 的 `check (Node 20/22/24)` 通过和对话解决后才能合并，且禁止 force push；`v*` tag 禁止删除/移动；外部 fork PR 需要维护者批准。
 
 ---
 
