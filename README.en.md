@@ -165,29 +165,6 @@ Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs a
 
 ---
 
-## Publishing
-
-See [docs/publishing.md](docs/publishing.md) for the full checklist. Short version:
-
-```bash
-npm login
-npm run check
-npm publish --access public
-```
-
-The package targets `https://registry.npmjs.org/` explicitly in `publishConfig`, so a local npm mirror (e.g. `registry.npmmirror.com`) cannot swallow the publish.
-
-Store coverage:
-
-- **npm** — canonical install source; [dsh-islands-ui](https://www.npmjs.com/package/dsh-islands-ui). Confirm with `npm view dsh-islands-ui version`
-- **DSHHub** — discovers npm packages with a valid `dsh.bundle` manifest automatically; claim the listing with the GitHub App
-- **awesome-dsh-plugin / dsh-market** — submit the ready-to-copy `theme` entry in [docs/awesome-dsh-plugin.yml](docs/awesome-dsh-plugin.yml)
-- **dsh-market Themes tab** — follows the `theme` category from awesome-dsh-plugin
-
-> awesome-dsh-plugin requires a repository at least **1 day old**, the `dsh-plugin` topic, and a root `package.json` with `dsh.bundle`. Publish to npm first, then submit the `theme` entry once the repository age requirement is met.
-
----
-
 ## Compatibility
 
 - The skin is a pure client style layer and does not replace session, settings or plugin data or behavior.

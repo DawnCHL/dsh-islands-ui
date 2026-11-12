@@ -181,29 +181,6 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 
 ---
 
-## 发布与商店
-
-完整步骤见 [docs/publishing.md](docs/publishing.md)。最短路径：
-
-```bash
-npm login
-npm run check
-npm publish --access public
-```
-
-`publishConfig.registry` 已显式指向 `https://registry.npmjs.org/`，避免本机 npm 镜像（如 `registry.npmmirror.com`）把发布吞掉。
-
-商店覆盖：
-
-- **npm** — 安装源；包名 [`dsh-islands-ui`](https://www.npmjs.com/package/dsh-islands-ui)，用 `npm view dsh-islands-ui version` 确认线上版本
-- **DSHHub** — 自动发现带合法 `dsh.bundle` manifest 的 npm 包，发布后无需额外操作；可在 Hub 用 GitHub App 认领条目
-- **awesome-dsh-plugin / dsh-market** — 用 [docs/awesome-dsh-plugin.yml](docs/awesome-dsh-plugin.yml) 里的 `theme` 条目提 PR；合并后 dsh-market 的「主题」Tab 会自动收录
-- **dsh-market** — 直接读取 awesome-dsh-plugin 的 `theme` 分类
-
-> awesome-dsh-plugin 要求仓库创建满 **1 天**、带 `dsh-plugin` topic，并且根 `package.json` 声明 `dsh.bundle`。先完成 npm 发布，满足仓库年龄要求后再提交 `theme` 条目，避免被 CI 打回。
-
----
-
 ## 兼容性与边界
 
 - 皮肤是**纯客户端样式层**，不替换会话、设置或插件的数据与交互；左侧栏插件固定、置顶聚合、定位等额外能力也只在客户端完成。
