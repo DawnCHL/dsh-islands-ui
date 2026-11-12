@@ -30,6 +30,7 @@ window.__ModuleLoader__.load({
         pinned: '置顶',
         untitled: '未命名会话',
         locate: '定位到会话',
+        unpin: '取消置顶',
         schedules: '自动化任务',
         plugins: '插件',
         settings: '设置',
@@ -64,6 +65,7 @@ window.__ModuleLoader__.load({
         pinned: 'Pinned',
         untitled: 'Untitled session',
         locate: 'Reveal in workspace',
+        unpin: 'Unpin session',
         schedules: 'Automation',
         plugins: 'Plugins',
         settings: 'Settings',
@@ -378,6 +380,19 @@ window.__ModuleLoader__.load({
       return h('svg', { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
         h('circle', { cx: 8, cy: 8, r: 4, stroke: 'currentColor', strokeWidth: 1.3 }),
         h('path', { d: 'M8 1.5v2.2M8 12.3v2.2M1.5 8h2.2M12.3 8h2.2', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' }));
+    }
+
+    function defaultPinIcon() {
+      try {
+        const entries = slotsService?.entriesOfSlot?.('contextMenu.icon') ?? [];
+        const entry =
+          entries.find((value) => value.options?.key === 'workspace.unpin') ??
+          entries.find((value) => value.options?.key === 'workspace.pin');
+        if (entry?.component !== undefined) return h(entry.component, { size: 14 });
+      } catch {
+        /* fall back to the local glyph */
+      }
+      return h(PinGlyph);
     }
 
     function revealPinnedSession(sessionId, title) {
@@ -1101,6 +1116,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       const rows = pinnedIds.map((id) => sessions[id]).filter((session) => session !== undefined);
+      const pinIcon = defaultPinIcon();
       if (host === null || rows.length === 0) return null;
 
       const toggle = () => {
@@ -1154,6 +1170,20 @@ window.__ModuleLoader__.load({
                       },
                     },
                     h('span', { className: 'isl-pinnedName' }, title),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'isl-pinnedPinBtn',
+                        title: copy.unpin,
+                        'aria-label': copy.unpin,
+                        onClick: (event) => {
+                          event.stopPropagation();
+                          workspacesService?.unpinSession?.(id).catch?.(() => {});
+                        },
+                      },
+                      pinIcon,
+                    ),
                     h(
                       'button',
                       {
