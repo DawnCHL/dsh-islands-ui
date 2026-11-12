@@ -8,151 +8,149 @@ body[data-islands-ui] .isl-rail {
   display: none;
 }
 
-@media (min-width: 768px) {
-  body[data-islands-ui] .isl-rail {
-    position: fixed;
-    top: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + 10px);
-    left: var(--isl-gap);
-    z-index: 25;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    width: var(--isl-rail-width);
-    pointer-events: auto;
-  }
+body[data-islands-ui] .isl-rail {
+  position: fixed;
+  top: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + 10px);
+  left: var(--isl-gap);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: var(--isl-rail-width);
+  pointer-events: auto;
+}
 
-  body[data-islands-ui] .isl-railBtn {
-    box-sizing: border-box;
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: 0;
-    border-radius: var(--isl-radius-md);
-    background: transparent;
-    color: var(--dsw-alias-label-secondary);
-    cursor: pointer;
-    transition:
-      background-color 0.12s var(--ds-ease-in-out),
-      color 0.12s var(--ds-ease-in-out);
-  }
+body[data-islands-ui] .isl-railBtn {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--isl-radius-md);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.12s var(--ds-ease-in-out),
+    color 0.12s var(--ds-ease-in-out);
+}
 
-  body[data-islands-ui] .isl-railBtn:hover {
-    background: var(--isl-hover);
-    color: var(--dsw-alias-label-primary);
-  }
+body[data-islands-ui] .isl-railBtn:hover {
+  background: var(--isl-hover);
+  color: var(--dsw-alias-label-primary);
+}
 
-  body[data-islands-ui] .isl-railBtn.is-active {
-    background: var(--isl-active);
-    color: var(--dsw-alias-label-primary);
-  }
+body[data-islands-ui] .isl-railBtn.is-active {
+  background: var(--isl-active);
+  color: var(--dsw-alias-label-primary);
+}
 
-  body[data-islands-ui] .isl-railBtn:focus-visible {
-    outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
-    outline-offset: -2px;
-  }
+body[data-islands-ui] .isl-railBtn:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: -2px;
+}
 
-  body[data-islands-ui] .isl-railDivider {
-    width: 24px;
-    height: 1px;
-    margin: 2px 0;
-    background: var(--isl-border-soft);
-  }
+body[data-islands-ui] .isl-railDivider {
+  width: 24px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--isl-border-soft);
+}
 
-  /* ---- Plugin pin menu -------------------------------------------------- */
-  body[data-islands-ui] .isl-railMenu {
-    position: fixed;
-    z-index: 35;
-    box-sizing: border-box;
-    width: 240px;
-    padding: 6px;
-    border: 1px solid var(--isl-border-soft);
-    border-radius: var(--isl-radius-md);
-    background: var(--isl-surface);
-    box-shadow: var(--isl-shadow-float);
-    color: var(--dsw-alias-label-primary);
-    font-size: 13px;
-    line-height: 20px;
-  }
+/* ---- Plugin pin menu -------------------------------------------------- */
+body[data-islands-ui] .isl-railMenu {
+  position: fixed;
+  z-index: 35;
+  box-sizing: border-box;
+  width: 240px;
+  padding: 6px;
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-md);
+  background: var(--isl-surface);
+  box-shadow: var(--isl-shadow-float);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+}
 
-  body[data-islands-ui] .isl-railMenuTitle {
-    padding: 4px 8px 6px;
-    color: var(--dsw-alias-label-tertiary);
-    font-size: 11px;
-    line-height: 16px;
-  }
+body[data-islands-ui] .isl-railMenuTitle {
+  padding: 4px 8px 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
 
-  body[data-islands-ui] .isl-railMenuRow {
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 34px;
-    padding: 5px 8px;
-    border: 0;
-    border-radius: var(--isl-radius-sm);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-  }
+body[data-islands-ui] .isl-railMenuRow {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--isl-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 
-  body[data-islands-ui] .isl-railMenuRow:hover {
-    background: var(--isl-hover);
-  }
+body[data-islands-ui] .isl-railMenuRow:hover {
+  background: var(--isl-hover);
+}
 
-  body[data-islands-ui] .isl-railMenuIcon {
-    display: inline-flex;
-    flex: none;
-    color: var(--dsw-alias-label-secondary);
-  }
+body[data-islands-ui] .isl-railMenuIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+}
 
-  body[data-islands-ui] .isl-railMenuText {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    gap: 1px;
-    min-width: 0;
-  }
+body[data-islands-ui] .isl-railMenuText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
 
-  body[data-islands-ui] .isl-railMenuLabel {
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+body[data-islands-ui] .isl-railMenuLabel {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  body[data-islands-ui] .isl-railMenuSub {
-    color: var(--dsw-alias-label-tertiary);
-    font-size: 10px;
-    line-height: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+body[data-islands-ui] .isl-railMenuSub {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  body[data-islands-ui] .isl-railMenuPin {
-    display: inline-flex;
-    flex: none;
-    color: var(--dsw-alias-label-tertiary);
-    opacity: 0.35;
-  }
+body[data-islands-ui] .isl-railMenuPin {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  opacity: 0.35;
+}
 
-  body[data-islands-ui] .isl-railMenuPin.is-pinned {
-    color: var(--dsw-alias-state-business-primary);
-    opacity: 1;
-  }
+body[data-islands-ui] .isl-railMenuPin.is-pinned {
+  color: var(--dsw-alias-state-business-primary);
+  opacity: 1;
+}
 
-  body[data-islands-ui] .isl-railEmpty {
-    padding: 8px;
-    color: var(--dsw-alias-label-tertiary);
-    font-size: 12px;
-  }
+body[data-islands-ui] .isl-railEmpty {
+  padding: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
 }
 
 /* Settings gear pinned above the account avatar. */
@@ -160,13 +158,28 @@ body[data-islands-ui] .isl-railSettings {
   display: none;
 }
 
-@media (min-width: 768px) {
+body[data-islands-ui] .isl-railSettings {
+  position: fixed;
+  left: calc(var(--isl-gap) + (var(--isl-rail-width) - 36px) / 2);
+  bottom: 56px;
+  z-index: 26;
+  display: grid;
+  place-items: center;
+}
+
+/* Narrow desktop: the rail is the persistent navigation; the workspace is a
+   drawer opened from its home button. Both the rail and its menus must sit
+   above the drawer (71) and the drawer mask (70). */
+@media (width <= 767px) {
+  body[data-islands-ui] .isl-rail {
+    z-index: 72;
+  }
+
   body[data-islands-ui] .isl-railSettings {
-    position: fixed;
-    left: calc(var(--isl-gap) + (var(--isl-rail-width) - 36px) / 2);
-    bottom: 56px;
-    z-index: 26;
-    display: grid;
-    place-items: center;
+    z-index: 72;
+  }
+
+  body[data-islands-ui] .isl-railMenu {
+    z-index: 1100;
   }
 }

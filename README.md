@@ -4,6 +4,9 @@
   <p><strong>为 DeepSeek Harness 打造的浮岛式界面皮肤</strong></p>
   <p>圆角岛屿 · 常驻左侧栏 · 置顶聚合 · 可调强调色</p>
   <p>
+    <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="npm" src="https://img.shields.io/npm/v/dsh-islands-ui?style=flat-square" /></a>
+    <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="downloads" src="https://img.shields.io/npm/dm/dsh-islands-ui?style=flat-square" /></a>
+    <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
     <img alt="DSH" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.1-4f7cff?style=flat-square" />
     <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-3b3b3b?style=flat-square" />
     <img alt="Windows/Linux" src="https://img.shields.io/badge/Windows%2FLinux-untested-orange?style=flat-square" />
@@ -15,6 +18,28 @@
 </p>
 
 Islands UI 把 Harness 的三栏界面重新组织成一组悬浮在纯色画布上的圆角岛屿：左侧常驻图标栏、独立的工作区列表、主会话区、右侧工作台和底部面板各自成块，用 5px 的画布间隙与发丝描边分层。它不修改 Harness 的会话、设置或插件逻辑，只重绘界面。
+
+---
+
+## 安装
+
+```bash
+# 桌面端默认 profile
+dsh plugin --profile desktop add dsh-islands-ui
+
+# 浏览器 / 远程场景使用的 web profile
+dsh plugin --profile web add dsh-islands-ui
+```
+
+安装后刷新页面（`⌘R` / `Ctrl+R`）。皮肤默认开启；可在 **设置 → Islands UI** 关闭，关闭后立即恢复 Harness 默认外观，偏好和强调色会保留。
+
+> 适用于 DSH `0.2.2-rc.1` 及 `0.2.x` 后续版本。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
+
+### 卸载
+
+```bash
+dsh plugin --profile desktop remove dsh-islands-ui
+```
 
 ---
 
@@ -38,6 +63,8 @@ Islands UI 把 Harness 的三栏界面重新组织成一组悬浮在纯色画布
 | 📌 | **置顶聚合** | 置顶会话同时保留在原工作区，并聚合到「新会话」与「工作区」标题之间；分类可折叠 |
 | 🌙 | **深色模式** | 完整深色 token：近黑画布、深灰岛屿、白色透明交互层与深色阴影 |
 | ⌨️ | **快捷键** | `⌘B` 折叠工作区、`⌥⌘B` 右侧栏、`⌘,` 设置、`⌘⇧M` 模型弹层；按钮悬停显示当前键位 |
+
+皮肤是纯客户端样式层；左侧栏插件固定、置顶聚合、定位与设置页也都在浏览器端完成，不新增 host 工具、服务或会话数据。
 
 ### 设计语言
 
@@ -79,27 +106,7 @@ Windows 下保留 Harness 原生标题栏，自定义顶栏显示在它下方；
 
 ---
 
-## 安装
-
-> 这是一个**本地 Harness bundle**，尚未发布到 npm；当前按 DSH `0.2.2-rc.1` 的客户端接口与 DOM 构建。
-
-1. 克隆仓库：
-
-   ```bash
-   git clone git@github.com:DawnCHL/dsh-islands-ui.git
-   ```
-
-2. 在 DSH 的插件管理器中把该目录作为本地 bundle 安装，或手动 link 到 profile 后合并本仓库的 `cordis.patch.yml`：
-
-   ```yaml
-   - insert:
-       - id: islands-ui
-         name: '@local/dsh-islands-ui'
-   ```
-
-3. 刷新页面（`⌘R` / `Ctrl+R`）。皮肤默认开启；可随时在 **设置 → Islands UI** 关闭，关闭后立即恢复 Harness 默认外观。
-
-### 状态存储
+## 状态存储
 
 | `localStorage` key | 作用 |
 | --- | --- |
@@ -128,13 +135,51 @@ src/
   client.template.js   浏览器端入口模板（React 组件 + 插槽注册）
 build.mjs              把 src/*.css 内联进 client.js
 client.js              构建产物（自包含，运行时无法读文件）
+scripts/check-package.mjs  发布前包内容校验
+skin.json              主题管理器清单
+docs/                  发布与商店收录说明
 ```
 
 ```bash
-node build.mjs   # 修改 src/*.css 或模板后重新生成 client.js
+npm run build        # 修改 src/*.css 或模板后重新生成 client.js
+npm run check        # 校验 client.js 是否为最新，并检查 npm 包是否可发布
+npm run pack:check   # npm pack --dry-run
+npm pack             # 生成 dsh-islands-ui-<version>.tgz
 ```
 
-开发时直接在 Harness 中刷新（`⌘R`）即可；`client.js` 是自包含的浏览器模块，样式在加载时注入。
+开发时直接在 Harness 中刷新（`⌘R`）即可；`client.js` 是自包含的浏览器模块，样式在加载时注入。模块加载器运行时无法读取包内文件，因此修改 CSS 后必须重新构建并提交 `client.js`。
+
+### 包内容
+
+| 路径 | 作用 |
+| --- | --- |
+| `index.js` | host 半边；皮肤没有 host 行为，仅用于保持合法的 profile row |
+| `client.js` | 浏览器半边：样式注入、左侧栏、置顶聚合、设置页与模型弹层 |
+| `cordis.patch.yml` | 一条 `insert`，row name 为 `dsh-islands-ui` |
+| `skin.json` | 给主题管理器的 id、名称、强调色、body 属性与挂载行 |
+| `screenshots.json` | 商店读取的 1–8 张仓库相对路径截图 |
+| `assets/` | 商店图标与 README 截图 |
+
+---
+
+## 发布与商店
+
+完整步骤见 [docs/publishing.md](docs/publishing.md)。最短路径：
+
+```bash
+npm login
+npm run check
+npm publish --access public
+```
+
+`publishConfig.registry` 已显式指向 `https://registry.npmjs.org/`，避免本机 npm 镜像（如 `registry.npmmirror.com`）把发布吞掉。
+
+商店覆盖：
+
+- **npm** — 安装源；包名 [`dsh-islands-ui`](https://www.npmjs.com/package/dsh-islands-ui)
+- **DSHHub** — 自动发现带合法 `dsh.bundle` manifest 的 npm 包，发布后无需额外操作
+- **awesome-dsh-plugin / dsh-market** — 用 [docs/awesome-dsh-plugin.yml](docs/awesome-dsh-plugin.yml) 里的 `theme` 条目提 PR；合并后 dsh-market 的「主题」Tab 会自动收录
+- **dsh-market** — 直接读取 awesome-dsh-plugin 的 `theme` 分类
 
 ---
 
@@ -144,6 +189,7 @@ node build.mjs   # 修改 src/*.css 或模板后重新生成 client.js
 - 选择器依赖 Harness 当前构建的 CSS Module 哈希类名（如 `PIRFFq_*`、`kB3qhq_*`、`JoiKIa_*`、`_77Pn0W_*`）与少量 `data-*` 挂点；**Harness 升级或重新构建后类名可能变化，需要同步更新对应 CSS**。
 - 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
 - Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
+- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`；`skin.json` 为主题管理器提供 id、强调色和挂载行。
 
 ---
 
@@ -152,5 +198,9 @@ node build.mjs   # 修改 src/*.css 或模板后重新生成 client.js
 - Bug / 兼容性问题：[Issues](https://github.com/DawnCHL/dsh-islands-ui/issues)
 - 改进或新功能：欢迎直接开 PR
 - 特别欢迎 Windows / Linux 的实测反馈（截图 + 系统版本 + 窗口尺寸）
+
+## License
+
+[MIT](LICENSE) © DawnCHL
 
 <p align="center"><sub>Made for DeepSeek Harness · Islands UI</sub></p>

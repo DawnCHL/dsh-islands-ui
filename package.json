@@ -1,29 +1,106 @@
 {
-  "name": "@local/dsh-islands-ui",
+  "name": "dsh-islands-ui",
   "version": "1.0.0",
-  "private": true,
+  "description": "Islands UI — a floating-island interface skin for DeepSeek Harness: rounded panels, a persistent left rail, a pinned-session shelf and an adjustable accent color.",
+  "icon": "./assets/icon-180.png",
   "type": "module",
-  "description": "Islands UI skin for DeepSeek Harness — floating rounded surfaces, a persistent rail and an islanded workspace list.",
+  "license": "MIT",
+  "author": {
+    "name": "DawnCHL",
+    "url": "https://github.com/DawnCHL"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DawnCHL/dsh-islands-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DawnCHL/dsh-islands-ui/issues"
+  },
+  "homepage": "https://github.com/DawnCHL/dsh-islands-ui#readme",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "theme",
+    "skin",
+    "ui",
+    "web-ui",
+    "islands",
+    "floating",
+    "sidebar",
+    "accent-color"
+  ],
+  "main": "./index.js",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
+    "./skin.json": "./skin.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
-    "./icon": "./icon.svg"
+    "./icon": "./icon.svg",
+    "./icon-180": "./assets/icon-180.png",
+    "./package.json": "./package.json"
   },
   "files": [
     "index.js",
     "client.js",
     "cordis.patch.yml",
+    "skin.json",
+    "screenshots.json",
     "locale/*.json",
-    "icon.svg"
+    "icon.svg",
+    "assets/",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check:build": "node build.mjs --check",
+    "check:package": "node scripts/check-package.mjs",
+    "check": "npm run check:build && npm run check:package",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run build && npm run check"
+  },
   "dsh": {
+    "manifestVersion": 1,
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
     "client": {
       "platform": "web",
+      "inject": [],
       "immediately": true
+    },
+    "engines": {
+      "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+    },
+    "compatibility": {
+      "dsh": ">=0.2.2-rc.1 <0.3.0-0",
+      "node": ">=20",
+      "platforms": [
+        "darwin",
+        "linux",
+        "win32"
+      ],
+      "surfaces": [
+        "web"
+      ]
     }
   }
 }

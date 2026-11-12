@@ -1,0 +1,11 @@
+{
+  "id": "islands-ui",
+  "name": "Islands UI",
+  "tagline": "浮岛式界面皮肤：圆角岛屿、常驻左侧栏、置顶聚合与可调强调色",
+  "accent": "#4176e6",
+  "bodyAttr": "data-islands-ui",
+  "package": "dsh-islands-ui",
+  "wiring": {
+    "id": "islands-ui"
+  }
+}

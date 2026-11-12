@@ -1,4 +1,6 @@
 # dsh-islands-ui bundle patch: one host row; the browser half ships in ./client.js.
+# The row name must match the published package name so `dsh plugin add` can
+# resolve it from the profile's node_modules.
 - insert:
     - id: islands-ui
-      name: '@local/dsh-islands-ui'
+      name: 'dsh-islands-ui'

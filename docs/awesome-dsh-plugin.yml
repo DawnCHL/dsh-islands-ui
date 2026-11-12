@@ -1,0 +1,7 @@
+url: https://github.com/DawnCHL/dsh-islands-ui
+name: DawnCHL/dsh-islands-ui
+category: theme
+description:
+  en: 'Islands UI skin for DeepSeek Harness: a floating-island layout with rounded panels, a persistent left rail, a pinned-session shelf and an adjustable accent color.'
+  zh: '为 DeepSeek Harness 打造的浮岛式界面皮肤：圆角岛屿布局、常驻左侧栏、置顶会话聚合与可调强调色。'
+icon: https://raw.githubusercontent.com/DawnCHL/dsh-islands-ui/main/assets/icon-180.png
