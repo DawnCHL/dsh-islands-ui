@@ -28,6 +28,22 @@ const css = parts.join('\n\n');
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 const built = template.replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
+const summary = `${files.length} stylesheets, ${css.length} bytes of CSS`;
 
-await writeFile(join(root, 'client.js'), built, 'utf8');
-console.log(`client.js: ${files.length} stylesheets, ${css.length} bytes of CSS`);
+if (process.argv.includes('--check')) {
+  let current = '';
+  try {
+    current = await readFile(join(root, 'client.js'), 'utf8');
+  } catch {
+    /* report the missing artifact through the same stale-build message */
+  }
+  if (current !== built) {
+    console.error(`client.js is stale (${summary}); run \`node build.mjs\` and commit the result.`);
+    process.exitCode = 1;
+  } else {
+    console.log(`client.js is up to date (${summary}).`);
+  }
+} else {
+  await writeFile(join(root, 'client.js'), built, 'utf8');
+  console.log(`client.js: ${summary}`);
+}

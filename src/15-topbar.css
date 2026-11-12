@@ -89,12 +89,19 @@ body[data-islands-ui] .isl-topbarToggle:focus-visible {
   outline-offset: -2px;
 }
 
+/* Narrow desktop: the top bar remains the window chrome (drag strip + right
+   panel toggle), but the rail's home button owns the workspace drawer. The
+   chrome must paint above the drawer mask (70) and the drawer (71). */
 @media (width <= 767px) {
   body[data-islands-ui] .isl-topbar {
+    z-index: 72;
+  }
+
+  body[data-islands-ui] .isl-topbarToggle {
     display: none;
   }
 
-  body[data-islands-ui] .PIRFFq_frame {
-    padding-top: var(--isl-gap);
+  body[data-islands-ui] .isl-topbarDrag {
+    margin-right: 40px;
   }
 }

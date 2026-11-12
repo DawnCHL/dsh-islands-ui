@@ -246,13 +246,13 @@ body[data-islands-ui] .kB3qhq_collapsed .kB3qhq_newSession {
   border-radius: var(--isl-radius-md);
 }
 
-@media (min-width: 768px) {
-  /* The window top bar owns the collapse control while the workspace is open;
-     the in-island toggle would duplicate it. */
-  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_toggle {
-    display: none;
-  }
+/* The window top bar / rail own the collapse controls; the in-island toggle
+   would duplicate them at every width. */
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_toggle {
+  display: none;
+}
 
+@media (min-width: 768px) {
   /* On macOS the shipped frame gives a collapsed sidebar zero width, hiding
      the rail too. Restore one rail-wide track (right panel still closed). */
   [data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame[data-sidebar-collapsed][data-rightbar-collapsed] {
@@ -264,10 +264,12 @@ body[data-islands-ui] .kB3qhq_collapsed .kB3qhq_newSession {
   [data-platform='darwin'] body[data-islands-ui] .PIRFFq_frame[data-sidebar-collapsed] {
     --dsh-frame-leading-clearance: 0px;
   }
+}
 
-  html:not([data-windows-titlebar]) body[data-islands-ui] .PIRFFq_leadingSeat {
-    display: none;
-  }
+/* The window chrome and the rail own the sidebar controls; the floating seat
+   is redundant (and at narrow widths would sit under the traffic lights). */
+body[data-islands-ui] .PIRFFq_leadingSeat {
+  display: none;
 }
 
 /* ---- Search / section chrome inside the island --------------------------- */
@@ -282,10 +284,28 @@ body[data-islands-ui] .Kjh-qa_searchExpanded .Kjh-qa_searchButton:hover {
 }
 
 /* ---- Narrow drawer ------------------------------------------------------- */
+/* Below the top bar's breakpoint the workspace becomes an overlay drawer. It
+   starts at the frame's content top (below the top bar and its 5px gap) and
+   leaves the window's 5px canvas margin on the left; the workspace card inside
+   keeps the right/bottom 5px so the drawer still reads as an island. */
 body[data-islands-ui] .PIRFFq_frame[data-sidebar-drawer] .PIRFFq_sidebarCol {
+  top: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + var(--isl-gap));
+  bottom: 0;
+  left: var(--isl-gap);
   background: var(--isl-canvas);
-  border-right: 1px solid var(--isl-border-soft);
+  border-right: 0;
   box-shadow: var(--isl-shadow-float);
+}
+
+body[data-islands-ui] .PIRFFq_frame[data-sidebar-drawer] .kB3qhq_root::after {
+  inset: 0 var(--isl-gap) var(--isl-gap) calc(var(--isl-rail-width) + var(--isl-gap));
+}
+
+/* The sidebar's grid track is zero in drawer mode, but its column gap remains;
+   shift the conversation island right by the persistent rail so the closed
+   drawer leaves the rail visible and the island keeps its 5px gap. */
+body[data-islands-ui] .PIRFFq_frame[data-sidebar-drawer] .PIRFFq_centerCol {
+  margin-left: var(--isl-rail-width);
 }
 
 /* ---- Account launcher (settings.launcher) --------------------------------
@@ -332,11 +352,9 @@ body[data-islands-ui][data-islands-workspace-collapsed] .kB3qhq_root:not(.kB3qhq
 }
 
 /* ---- Custom rail replaces the shipped brand + panel icon column ---------- */
-@media (min-width: 768px) {
-  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_logoRow,
-  body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelList {
-    display: none !important;
-  }
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_logoRow,
+body[data-islands-ui] .kB3qhq_root:not(.kB3qhq_collapsed) .kB3qhq_panelList {
+  display: none !important;
 }
 
 /* ---- Aggregate pinned sessions ------------------------------------------ */

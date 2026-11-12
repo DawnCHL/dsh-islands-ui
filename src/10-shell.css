@@ -80,10 +80,29 @@ body[data-islands-ui] .PIRFFq_drawerMask {
   backdrop-filter: var(--dsw-mask-blur);
 }
 
+/* The shell overlay layer is where the rail and window top bar live. In
+   drawer mode it must paint above the drawer mask (70) and the drawer (71),
+   otherwise the persistent rail disappears under the open workspace drawer. */
+@media (width <= 767px) {
+  body[data-islands-ui] .PIRFFq_overlayLayer {
+    z-index: 72;
+  }
+}
+
 /* The resize handle is invisible chrome; keep it grabbable but quiet. */
 body[data-islands-ui] .PIRFFq_handle {
   width: 10px;
   margin-left: -5px;
+}
+
+/* The shell computes the right handle's inline `left` from the frame's
+   border-box width, but its absolute containing block is the padded grid area
+   and the panel itself sits inside the right padding. That shifts the handle
+   two gaps to the right — wholly inside the right island. Cancel the frame's
+   horizontal padding so the strip straddles the right island's left edge
+   (covering the whole canvas gap plus 5px of the panel) like the left one. */
+body[data-islands-ui] .PIRFFq_handle[data-side='rightbar'] {
+  margin-left: calc(-5px - 2 * var(--isl-gap));
 }
 
 /* Windows title bar keeps its native height; the frame padding already gives
@@ -135,7 +154,29 @@ body[data-islands-ui] [data-dsh-bottom-panel] {
   border: 1px solid var(--isl-border-soft);
   border-radius: var(--isl-radius-lg);
   box-shadow: none;
+  /* The rounded island clips its content, but NOT the height-drag strip: the
+     strip must reach into the canvas gap above the panel to be reachable
+     there. Clip the body instead (below), so the strip can overhang. */
+  overflow: visible;
+}
+
+/* Keep the island's rounded content edge with the panel's own clipping gone:
+   the body carries the radius, while the absolute resize strip and the close
+   control stay outside this clip. */
+body[data-islands-ui] [data-dsh-bottom-panel] > [class*='panelBody'] {
   overflow: clip;
+  border-radius: calc(var(--isl-radius-lg) - 1px);
+}
+
+/* The host centers its strip on the panel's top border (`top: -4px;
+   height: 8px`), which was right before the skin opened a canvas gap between
+   the conversation island and the panel. Anchor the 10px strip to that gap
+   instead: 5px above the border box top (the whole gap) and 5px inside the
+   panel, matching the side handles' straddle. `top` is relative to the panel's
+   padding box, hence the extra 1px border compensation. */
+body[data-islands-ui] [data-dsh-bottom-panel] > [class*='bottomResize'] {
+  top: calc(-1px - var(--isl-gap));
+  height: 10px;
 }
 
 /* The native right sidebar keeps its own width preference, which can exceed
@@ -160,10 +201,29 @@ body[data-islands-ui] .Dv5QdW_panel[data-sidebar-right-open]:not([data-sidebar-r
    variant. Instead the expanded rail stays mounted and only the workspace
    column hides, so the left column never re-renders or re-flows.
    ========================================================================== */
-body[data-islands-ui][data-islands-workspace-collapsed] .PIRFFq_frame {
+
+/* The right column must keep its own track while the workspace is collapsed.
+   Pin it to 0 only while the right pane is closed; when it opens, use the
+   pane's PREFERRED width (published by the client). Reading the current
+   column width here deadlocks: it is 0 while closed, so opening the pane
+   could never grow the track, and the panel's `width: 100%` clamp would keep
+   it at two border pixels. The fallback keeps the pane visible even before
+   the width source has been located. */
+body[data-islands-ui][data-islands-workspace-collapsed]
+  .PIRFFq_frame:not(
+    :has(.Dv5QdW_panel[data-sidebar-right-open]:not([data-sidebar-right-panel='fullscreen']))
+  ) {
+  grid-template-columns:
+    var(--isl-rail-collapsed-width) minmax(0, 1fr) 0 !important;
+}
+
+body[data-islands-ui][data-islands-workspace-collapsed]
+  .PIRFFq_frame:has(
+    .Dv5QdW_panel[data-sidebar-right-open]:not([data-sidebar-right-panel='fullscreen'])
+  ) {
   grid-template-columns:
     var(--isl-rail-collapsed-width) minmax(0, 1fr)
-    var(--isl-rightbar-w, 0px) !important;
+    var(--isl-rightbar-w, max(300px, 45vw)) !important;
 }
 
 body[data-islands-ui] .PIRFFq_frame[data-islands-animating] {

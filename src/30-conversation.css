@@ -116,46 +116,45 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
    Always-visible right sidebar toggle
    The native header button unmounts while the panel is open and the panel
    carries its own collapse control. The top bar owns one persistent toggle
-   instead, and closes through the native collapse action.
+   instead, and closes through the native collapse action. It applies at every
+   width: the narrow top bar keeps the same control.
    ========================================================================== */
-@media (min-width: 768px) {
-  body[data-islands-ui] .isl-rightToggle {
-    position: fixed;
-    top: calc(var(--isl-chrome-top) + 10px);
-    right: var(--isl-gap);
-    z-index: 32;
-    box-sizing: border-box;
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: var(--isl-radius-sm);
-    background: transparent;
-    color: var(--dsw-alias-label-secondary);
-    cursor: pointer;
-    pointer-events: auto;
-    -webkit-app-region: no-drag;
-  }
+body[data-islands-ui] .isl-rightToggle {
+  position: fixed;
+  top: calc(var(--isl-chrome-top) + 10px);
+  right: var(--isl-gap);
+  z-index: 32;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--isl-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
 
-  body[data-islands-ui] .isl-rightToggle:hover,
-  body[data-islands-ui] .isl-rightToggle[aria-pressed='true'] {
-    background: var(--isl-hover);
-    color: var(--dsw-alias-label-primary);
-  }
+body[data-islands-ui] .isl-rightToggle:hover,
+body[data-islands-ui] .isl-rightToggle[aria-pressed='true'] {
+  background: var(--isl-hover);
+  color: var(--dsw-alias-label-primary);
+}
 
-  body[data-islands-ui] .isl-rightToggle:focus-visible {
-    outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
-    outline-offset: -2px;
-  }
+body[data-islands-ui] .isl-rightToggle:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: -2px;
+}
 
-  /* The top bar owns open and close; the island's own expand/collapse
-     controls would duplicate it. */
-  body[data-islands-ui] [data-sidebar-right-expand],
-  body[data-islands-ui] [data-sidebar-right-toggle],
-  /* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
-  body[data-islands-ui] ._5KEEsG_headerSide {
-    display: none !important;
-  }
+/* The top bar owns open and close; the island's own expand/collapse
+   controls would duplicate it. */
+body[data-islands-ui] [data-sidebar-right-expand],
+body[data-islands-ui] [data-sidebar-right-toggle],
+/* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
+body[data-islands-ui] ._5KEEsG_headerSide {
+  display: none !important;
 }

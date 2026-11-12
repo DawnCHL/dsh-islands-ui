@@ -6,7 +6,7 @@
  * has no filesystem access, so the built client.js is self-contained.
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-islands-ui',
+  id: 'dsh-islands-ui',
   factory(require) {
     const React = require('react');
     const ReactDOM = require('react-dom');
@@ -527,6 +527,15 @@ window.__ModuleLoader__.load({
       };
 
       const select = (id) => {
+        // The home button is the workspace drawer's opener in the narrow
+        // layout; on desktop it returns to the conversation as before.
+        if (id === null) {
+          const frame = document.querySelector('.PIRFFq_frame');
+          if (frame !== null && frame.hasAttribute('data-sidebar-drawer')) {
+            layoutService?.toggleSidebar();
+            return;
+          }
+        }
         layoutService?.selectPanel(id);
       };
 
@@ -967,8 +976,12 @@ window.__ModuleLoader__.load({
         const read = () => setOpen(document.querySelector('.Dv5QdW_panel[data-sidebar-right-open]') !== null);
         read();
         const observer = new MutationObserver(read);
-        observer.observe(document.body, {
+        // The pane can mount already open (restored layout), in which case no
+        // attribute mutation for its open state is ever observed. Watch for
+        // insertion too, not only later attribute flips.
+        observer.observe(document.getElementById('root') ?? document.body, {
           subtree: true,
+          childList: true,
           attributes: true,
           attributeFilter: ['data-sidebar-right-open'],
         });
@@ -1010,6 +1023,13 @@ window.__ModuleLoader__.load({
      */
     function toggleWorkspace() {
       const frame = document.querySelector('.PIRFFq_frame');
+      if (frame !== null && frame.hasAttribute('data-sidebar-drawer')) {
+        // Narrow layout: the workspace is a drawer, owned by DSH's native
+        // narrow expansion state. The rail's home button and the shortcut both
+        // open/close it here.
+        layoutService?.toggleSidebar();
+        return;
+      }
       if (frame !== null && frame.hasAttribute('data-sidebar-collapsed')) {
         layoutService?.toggleSidebar();
         document.body.removeAttribute(WORKSPACE_ATTR);
@@ -1394,8 +1414,8 @@ window.__ModuleLoader__.load({
             document.body.setAttribute(ATTRIBUTE, '');
           }
           const tag = document.createElement('style');
-          tag.dataset.plugin = '@local/dsh-islands-ui';
-          tag.dataset.pluginCss = '@local/dsh-islands-ui/islands.css';
+          tag.dataset.plugin = 'dsh-islands-ui';
+          tag.dataset.pluginCss = 'dsh-islands-ui/islands.css';
           tag.textContent = CSS;
           document.head.appendChild(tag);
           return () => {
@@ -1406,15 +1426,73 @@ window.__ModuleLoader__.load({
 
         ctx.effect(() => {
           const root = document.documentElement;
-          const column = document.querySelector('.PIRFFq_rightbarCol');
-          if (column === null) return;
-          const observer = new ResizeObserver((entries) => {
-            const width = entries[0]?.contentRect.width ?? 0;
-            root.style.setProperty('--isl-rightbar-w', `${Math.round(width)}px`);
-          });
-          observer.observe(column);
+          let panel = null;
+          let styleObserver = null;
+          let mountObserver = null;
+          let locateFrame = null;
+          let retryTimer = null;
+
+          // Publish the right pane's PREFERRED width, not the width the column
+          // currently has. The column is 0 while the pane is closed (and while
+          // the independent workspace collapse pins the right track), so a
+          // measurement-based value can never recover after the pane opens:
+          // the track would stay 0 and the panel clamp would keep it hidden.
+          // The panel itself always carries its resolved width in
+          // `--dsh-sidebar-width` (and its inline width), even while closed.
+          const publish = () => {
+            if (panel === null) return;
+            const value = (panel.style.getPropertyValue('--dsh-sidebar-width') || panel.style.width || '').trim();
+            if (value !== '') root.style.setProperty('--isl-rightbar-w', value);
+          };
+
+          const watch = (next) => {
+            if (next === panel) return;
+            styleObserver?.disconnect();
+            styleObserver = null;
+            panel = next;
+            if (panel === null) return;
+            styleObserver = new MutationObserver(publish);
+            styleObserver.observe(panel, { attributes: true, attributeFilter: ['style'] });
+            publish();
+          };
+
+          const locate = () => {
+            locateFrame = null;
+            const next = document.querySelector('.Dv5QdW_panel');
+            watch(next);
+            if (next === null) return;
+            mountObserver?.disconnect();
+            mountObserver = null;
+            if (retryTimer !== null) {
+              clearTimeout(retryTimer);
+              retryTimer = null;
+            }
+          };
+
+          const scheduleLocate = () => {
+            if (locateFrame !== null) return;
+            locateFrame = requestAnimationFrame(locate);
+          };
+
+          locate();
+          // The client applies before the shell mounts, so the first query can
+          // miss the right pane. Watch until it appears (bounded: a profile
+          // without the right pane must not keep a document-wide observer).
+          if (panel === null && document.body !== null) {
+            mountObserver = new MutationObserver(scheduleLocate);
+            mountObserver.observe(document.body, { childList: true, subtree: true });
+            retryTimer = setTimeout(() => {
+              mountObserver?.disconnect();
+              mountObserver = null;
+              retryTimer = null;
+            }, 10_000);
+          }
+
           return () => {
-            observer.disconnect();
+            if (locateFrame !== null) cancelAnimationFrame(locateFrame);
+            if (retryTimer !== null) clearTimeout(retryTimer);
+            mountObserver?.disconnect();
+            styleObserver?.disconnect();
             root.style.removeProperty('--isl-rightbar-w');
           };
         }, 'dsh-islands-ui: rightbar width');
@@ -1504,13 +1582,20 @@ window.__ModuleLoader__.load({
         // The native primary chord reaches DSH's own sidebar collapse before any
         // fixed listener. Convert that collapse into our workspace collapse
         // immediately (and restore the expanded sidebar render tree) so the
-        // old rail never stays on screen.
+        // old rail never stays on screen. Drawer mode is different: its open
+        // state is native, and the independent desktop collapse must never hide
+        // the drawer's workspace, so entering the drawer clears that attribute.
         ctx.effect(() => {
           let observer;
           let timer;
           const fix = () => {
             const frame = document.querySelector('.PIRFFq_frame');
-            if (frame === null || !frame.hasAttribute('data-sidebar-collapsed')) return;
+            if (frame === null) return;
+            if (frame.hasAttribute('data-sidebar-drawer')) {
+              document.body.removeAttribute(WORKSPACE_ATTR);
+              return;
+            }
+            if (!frame.hasAttribute('data-sidebar-collapsed')) return;
             const wasCollapsed = document.body.hasAttribute(WORKSPACE_ATTR);
             if (wasCollapsed) document.body.removeAttribute(WORKSPACE_ATTR);
             else document.body.setAttribute(WORKSPACE_ATTR, '');
@@ -1524,7 +1609,10 @@ window.__ModuleLoader__.load({
             }
             fix();
             observer = new MutationObserver(fix);
-            observer.observe(frame, { attributes: true, attributeFilter: ['data-sidebar-collapsed'] });
+            observer.observe(frame, {
+              attributes: true,
+              attributeFilter: ['data-sidebar-collapsed', 'data-sidebar-drawer'],
+            });
           };
           attach();
           return () => {
