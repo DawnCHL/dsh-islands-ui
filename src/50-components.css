@@ -215,3 +215,203 @@ body[data-islands-ui] :focus-visible {
   opacity: 0;
   cursor: pointer;
 }
+
+
+/* ---- Compatibility notice ------------------------------------------------
+   Rendered while the skin is OFF, so nothing here may rely on the `--isl-*`
+   scale or on `body[data-islands-ui]`. Every custom property carries a
+   fallback and every color comes from the public DSH theme tokens. */
+
+.isl-compatToast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2000;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 12px 10px 12px 14px;
+  border: 1px solid rgba(224, 160, 24, 0.5);
+  border-left: 3px solid #e0a018;
+  border-radius: var(--isl-radius-lg, 16px);
+  background: var(--dsw-alias-bg-overlay, #ffffff);
+  color: var(--dsw-alias-label-primary, #1f2328);
+  box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  line-height: 19px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.isl-compatToast.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-compatToast {
+    transition: none;
+  }
+}
+
+.isl-compatToastBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.isl-compatToastTitle {
+  font-weight: 600;
+}
+
+.isl-compatToastText {
+  margin-top: 2px;
+  color: var(--dsw-alias-label-secondary, #555b63);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.isl-compatToastAction {
+  margin-top: 6px;
+  color: #a86b00;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.isl-compatToastClose {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary, #737a82);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.isl-compatToastClose:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(17, 24, 39, 0.06));
+  color: var(--dsw-alias-label-primary, #1f2328);
+}
+
+/* The settings-page warning bar. */
+.isl-compatBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(224, 160, 24, 0.45);
+  border-radius: var(--isl-radius-lg, 16px);
+  background: rgba(240, 180, 41, 0.14);
+  background: color-mix(in srgb, #f0b429 14%, transparent);
+  color: var(--dsw-alias-label-primary, #1f2328);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.isl-compatBannerIcon {
+  flex: none;
+  display: inline-flex;
+  margin-top: 1px;
+  color: #b47400;
+}
+
+.isl-compatBannerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.isl-compatBannerTitle {
+  font-weight: 600;
+}
+
+.isl-compatBannerBody,
+.isl-compatBannerHint {
+  margin-top: 2px;
+  color: var(--dsw-alias-label-secondary, #555b63);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.isl-compatBannerHint {
+  margin-top: 6px;
+}
+
+.isl-compatBannerList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--dsw-alias-label-secondary, #555b63);
+  font-size: 12px;
+}
+
+.isl-compatAnchor {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(17, 24, 39, 0.06);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.isl-compatBannerAction {
+  flex: none;
+  align-self: flex-start;
+  padding: 5px 10px;
+  border: 1px solid rgba(224, 160, 24, 0.5);
+  border-radius: 8px;
+  background: transparent;
+  color: #8a5a00;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.isl-compatBannerAction:hover {
+  background: rgba(240, 180, 41, 0.18);
+}
+
+.isl-compatForced {
+  margin: 8px 0 0;
+  color: var(--dsw-alias-label-tertiary, #737a82);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.isl-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The notice renders while the skin is off, so darkness is read straight from
+   the host theme attribute its own stylesheet uses. */
+body[data-ds-dark-theme] .isl-compatBannerIcon {
+  color: #e8b451;
+}
+
+body[data-ds-dark-theme] .isl-compatBannerAction {
+  border-color: rgba(240, 180, 41, 0.45);
+  color: #f2c879;
+}
+
+body[data-ds-dark-theme] .isl-compatBannerAction:hover {
+  background: rgba(240, 180, 41, 0.16);
+}
+
+body[data-ds-dark-theme] .isl-compatAnchor {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body[data-ds-dark-theme] .isl-compatToastAction {
+  color: #f0c274;
+}

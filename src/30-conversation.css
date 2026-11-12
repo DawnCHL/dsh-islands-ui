@@ -152,7 +152,16 @@ body[data-islands-ui] .isl-rightToggle:focus-visible {
 
 /* The top bar owns open and close; the island's own expand/collapse
    controls would duplicate it. */
-body[data-islands-ui] [data-sidebar-right-expand],
+body[data-islands-ui] [data-sidebar-right-expand] {
+  /* Keep the native expand button's box in the layout even though the top
+     bar's toggle paints over it. Other header plugins anchor to this
+     button's rect (dsh-better-sidebar's blank-session dock fallback does),
+     and `display: none` collapses that rect to 0x0, sending them to the
+     top-left corner where they collide with the workspace toggle. */
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 body[data-islands-ui] [data-sidebar-right-toggle],
 /* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
 body[data-islands-ui] ._5KEEsG_headerSide {

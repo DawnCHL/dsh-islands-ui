@@ -192,9 +192,10 @@ Store coverage:
 
 - The skin is a pure client style layer and does not replace session, settings or plugin data or behavior.
 - Selectors depend on the current Harness build's CSS Module hashes (e.g. `PIRFFq_*`, `kB3qhq_*`, `JoiKIa_*`, `_77Pn0W_*`) and a few `data-*` hooks. A Harness upgrade or rebuild can change those class names and require a matching CSS update.
+- On startup the plugin verifies three layout anchors (`.PIRFFq_frame`, `.PIRFFq_centerCol`, `.kB3qhq_root`). If any is missing the skin stays **off**, DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway".
 - Dark mode follows `data-ds-dark-theme`; the accent remaps `--dsw-alias-state-business-primary`, so it affects both the skin and native buttons.
 - Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height`; Linux currently follows native window decorations.
-- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; `skin.json` gives theme managers the id, accent and mount row.
+- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade, while build-to-build drift inside the line is caught by the startup anchor check. `skin.json` gives theme managers the id, accent and mount row.
 
 ---
 

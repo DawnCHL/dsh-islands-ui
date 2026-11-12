@@ -16,7 +16,25 @@ window.__ModuleLoader__.load({
     const ATTRIBUTE = 'data-islands-ui';
     const STORAGE_KEY = 'dsh-islands-ui:enabled';
     const WORKSPACE_ATTR = 'data-islands-workspace-collapsed';
+    /** Escape hatch, session scoped so the next launch re-runs the check. */
+    const FORCE_KEY = 'dsh-islands-ui:force';
+    /**
+     * Layout anchors every Islands rule is written against. They do not exist
+     * when `apply()` runs (the shell mounts afterwards), so the gate waits for
+     * the frame and only then decides whether this build still matches.
+     */
+    const REQUIRED_ANCHORS = ['.PIRFFq_frame', '.PIRFFq_centerCol'];
+    const SIDEBAR_COLUMN = '.PIRFFq_sidebarCol';
+    const SIDEBAR_ROOT = '.kB3qhq_root';
+    /** No shell content at all after this long: the build is unusable. */
+    const COMPAT_TIMEOUT_MS = 6000;
+    /** Content mounted but the frame anchor never showed up: rename, not slowness. */
+    const COMPAT_CONTENT_GRACE_MS = 1200;
     let animateTimer;
+    let skinRegistrar = null;
+    let activated = false;
+    let compatState = { status: 'checking', missing: [], forced: false };
+    const compatListeners = new Set();
 
     /** Copy for the preference row; the row is the only user-facing string. */
     const COPY = {
@@ -53,6 +71,17 @@ window.__ModuleLoader__.load({
         pick: '选择模型',
         empty: '没有可用模型',
         failed: '切换失败',
+        compatTitle: 'Islands UI 已自动关闭',
+        compatBody: '当前 DSH 构建的界面结构与插件不匹配，皮肤已回退到默认外观，以免出现双栏重叠或控件遮挡。',
+        compatView: '查看插件设置',
+        compatMissing: '缺失的界面锚点',
+        compatBannerTitle: '皮肤已自动停用：界面结构不匹配',
+        compatBannerBody:
+          'Islands UI 的样式写在当前 DSH 构建的类名和结构上。升级后的 DSH 改掉了这些锚点，浮岛布局、原生导航隐藏和工作区折叠都会失效，因此插件没有启用皮肤，DSH 保持默认外观。',
+        compatFix: '处理方式：把 Islands UI 更新到适配当前 DSH 的版本，或回退 DSH。若确认界面正常，可临时强制启用（下次启动会重新检测）。',
+        compatForce: '仍然启用',
+        compatForced: '已强制启用，本次会话跳过自动检测。',
+        compatDismiss: '关闭提示',
       },
       en: {
         title: 'Islands interface',
@@ -88,6 +117,19 @@ window.__ModuleLoader__.load({
         pick: 'Select model',
         empty: 'No models available',
         failed: 'Selection failed',
+        compatTitle: 'Islands UI turned itself off',
+        compatBody:
+          'This DSH build no longer matches the plugin, so the skin fell back to the default look instead of overlapping panels.',
+        compatView: 'Open plugin settings',
+        compatMissing: 'Missing interface anchors',
+        compatBannerTitle: 'Skin disabled: interface structure changed',
+        compatBannerBody:
+          'Islands UI styles itself against the class names and structure of the DSH build it ships for. This build changed those anchors, so the island layout, the hidden native navigation and the workspace collapse would all break. The skin therefore stayed off and DSH keeps its default look.',
+        compatFix:
+          'Update Islands UI to a release that matches this DSH build, or roll DSH back. If the interface looks fine, you can enable it anyway for this session.',
+        compatForce: 'Enable anyway',
+        compatForced: 'Enabled manually; automatic detection is skipped for this session.',
+        compatDismiss: 'Dismiss',
       },
     };
 
@@ -165,6 +207,53 @@ window.__ModuleLoader__.load({
 
     function useEnabled() {
       return React.useSyncExternalStore(subscribe, getSnapshot);
+    }
+
+    function setCompat(next) {
+      compatState = next;
+      for (const listener of compatListeners) listener();
+    }
+
+    function subscribeCompat(listener) {
+      compatListeners.add(listener);
+      return () => compatListeners.delete(listener);
+    }
+
+    function getCompatSnapshot() {
+      return compatState;
+    }
+
+    function useCompat() {
+      return React.useSyncExternalStore(subscribeCompat, getCompatSnapshot);
+    }
+
+    function currentCopy() {
+      try {
+        return String(localeService?.getSnapshot?.().active ?? 'en').toLowerCase().startsWith('zh')
+          ? COPY.zh
+          : COPY.en;
+      } catch {
+        return COPY.en;
+      }
+    }
+
+    function isForced() {
+      try {
+        return window.sessionStorage.getItem(FORCE_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    /** Which anchors of the running DSH build are gone. */
+    function missingAnchors() {
+      const missing = REQUIRED_ANCHORS.filter((selector) => document.querySelector(selector) === null);
+      // A sidebar column without its root class means the sidebar was rebuilt
+      // under another name; the skin would render a second rail beside it.
+      if (document.querySelector(SIDEBAR_COLUMN) !== null && document.querySelector(SIDEBAR_ROOT) === null) {
+        missing.push(SIDEBAR_ROOT);
+      }
+      return missing;
     }
 
     function readAccent() {
@@ -337,7 +426,32 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function openSettings() {
+    /**
+     * Best effort selection of one settings section once the dialog is up. The
+     * settings navigation has no service of its own, so the row is matched by
+     * its label inside the dialog and simply skipped when it is not there.
+     */
+    function revealSettingsSection(label) {
+      if (typeof label !== 'string' || label === '') return;
+      let attempts = 0;
+      const tick = () => {
+        attempts += 1;
+        const scope = document.querySelector('[role="dialog"]') ?? document;
+        const cells = [
+          ...scope.querySelectorAll('button, a, [role="tab"], [role="option"], [class*="navCell"]'),
+        ];
+        const target = cells.find((cell) => (cell.textContent ?? '').trim() === label);
+        if (target instanceof HTMLElement) {
+          target.click();
+          return;
+        }
+        if (attempts < 12) window.setTimeout(tick, 120);
+      };
+      window.setTimeout(tick, 140);
+    }
+
+    function openSettings(options) {
+      const section = options?.section;
       // The account launcher owns the Settings row; clicking that row is the
       // reliable path on desktop (configurable shortcuts go through the native
       // keyboard bridge, so a synthetic keydown never reaches them).
@@ -349,6 +463,7 @@ window.__ModuleLoader__.load({
             ...document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menu"] [role="menuitemradio"], [role="menu"] button, [role="menu"] a'),
           ].find((element) => /设置|Settings|偏好|Preferences/i.test(element.textContent ?? ''));
           if (item instanceof HTMLElement) item.click();
+          revealSettingsSection(section);
         }, 60);
         return;
       }
@@ -374,6 +489,7 @@ window.__ModuleLoader__.load({
       } catch {
         /* ignore */
       }
+      revealSettingsSection(section);
     }
 
     function LocateGlyph() {
@@ -1288,11 +1404,221 @@ window.__ModuleLoader__.load({
       );
     }
 
+    function WarningGlyph() {
+      return h(
+        'svg',
+        { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M8 2.4 14.2 13H1.8L8 2.4Z', stroke: 'currentColor', strokeWidth: 1.4, strokeLinejoin: 'round' }),
+        h('path', { d: 'M8 6.4v3', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }),
+        h('circle', { cx: 8, cy: 11.3, r: 0.9, fill: 'currentColor' }),
+      );
+    }
+
+    /** Amber bar at the top of the Islands page explaining the auto-disable. */
+    function CompatibilityBanner({ copy, compat, onForce }) {
+      if (compat.status !== 'missing') return null;
+      return h(
+        'div',
+        { className: 'isl-compatBanner', role: 'alert' },
+        h('span', { className: 'isl-compatBannerIcon' }, h(WarningGlyph)),
+        h(
+          'div',
+          { className: 'isl-compatBannerText' },
+          h('div', { className: 'isl-compatBannerTitle' }, copy.compatBannerTitle),
+          h('div', { className: 'isl-compatBannerBody' }, copy.compatBannerBody),
+          h(
+            'div',
+            { className: 'isl-compatBannerList' },
+            h('span', null, `${copy.compatMissing}:`),
+            compat.missing.map((selector) => h('code', { key: selector, className: 'isl-compatAnchor' }, selector)),
+          ),
+          h('div', { className: 'isl-compatBannerHint' }, copy.compatFix),
+        ),
+        h('button', { type: 'button', className: 'isl-compatBannerAction', onClick: onForce }, copy.compatForce),
+      );
+    }
+
+    /**
+     * Turn the skin on only when the build still matches the stylesheet.
+     *
+     * The plugin's own chrome is plain React and keeps rendering no matter what
+     * DSH does, while every layout rule is keyed to the shipped class names. A
+     * renamed anchor therefore yields a half-skinned, overlapping UI instead of
+     * a clean fallback, so a mismatched build stays on the untouched default.
+     */
+    function startCompatibilityGate() {
+      let frameHandle = null;
+      let settled = false;
+      let retries = 0;
+      let contentSeenAt = null;
+      const startedAt = Date.now();
+
+      const stop = () => {
+        if (frameHandle !== null) cancelAnimationFrame(frameHandle);
+        frameHandle = null;
+      };
+
+      const fail = (missing) => {
+        if (settled) return;
+        settled = true;
+        stop();
+        setCompat({ status: 'missing', missing, forced: false });
+        console.warn('[islands-ui] interface anchors missing; the skin stayed off:', missing);
+        // Someone who already switched the skin off does not need a popup; the
+        // settings page still carries the explanation.
+        if (readStored()) showCompatibilityToast();
+      };
+
+      const pass = () => {
+        if (settled) return;
+        settled = true;
+        stop();
+        setCompat({ status: 'ok', missing: [], forced: false });
+        activate();
+      };
+
+      const settle = () => {
+        frameHandle = null;
+        if (settled) return;
+        const missing = missingAnchors();
+        if (missing.length === 0) {
+          pass();
+          return;
+        }
+        // Siblings can mount a frame after the frame element itself.
+        retries += 1;
+        if (retries < 4) {
+          frameHandle = requestAnimationFrame(settle);
+          return;
+        }
+        fail(missing);
+      };
+
+      const watch = () => {
+        frameHandle = null;
+        if (settled) return;
+        if (document.querySelector(REQUIRED_ANCHORS[0]) !== null) {
+          settle();
+          return;
+        }
+        // Anything rendered into the app root means the shell mounted; if the
+        // frame anchor is still absent after a grace period it was renamed,
+        // and waiting for the hard timeout would only delay the notice.
+        const root = document.getElementById('root') ?? document.body;
+        if (contentSeenAt === null && root !== null && root.childElementCount > 0) {
+          contentSeenAt = Date.now();
+        }
+        if (contentSeenAt !== null && Date.now() - contentSeenAt > COMPAT_CONTENT_GRACE_MS) {
+          fail(missingAnchors());
+          return;
+        }
+        if (Date.now() - startedAt > COMPAT_TIMEOUT_MS) {
+          fail(missingAnchors());
+          return;
+        }
+        frameHandle = requestAnimationFrame(watch);
+      };
+
+      frameHandle = requestAnimationFrame(watch);
+      return stop;
+    }
+
+    function activate() {
+      if (activated || skinRegistrar === null) return;
+      activated = true;
+      syncAttribute();
+      applyAccent(readAccent());
+      try {
+        skinRegistrar();
+      } catch (error) {
+        console.warn('[islands-ui] failed to mount the skin', error);
+        document.body?.removeAttribute(ATTRIBUTE);
+      }
+    }
+
+    function forceEnable() {
+      try {
+        window.sessionStorage.setItem(FORCE_KEY, '1');
+      } catch {
+        /* private mode: the choice still applies for this page. */
+      }
+      setCompat({ status: 'ok', missing: [], forced: true });
+      activate();
+    }
+
+    /**
+     * Plain-DOM toast: it must work while the shell is in an unknown state, so
+     * it is appended to `body`, styled by the always-injected stylesheet and
+     * removed without React.
+     */
+    function showCompatibilityToast() {
+      if (document.body === null) return;
+      const copy = currentCopy();
+      const host = document.createElement('div');
+      host.className = 'isl-compatToast';
+      host.setAttribute('role', 'status');
+      host.setAttribute('aria-live', 'polite');
+      host.tabIndex = 0;
+      host.title = copy.compatView;
+
+      const body = document.createElement('div');
+      body.className = 'isl-compatToastBody';
+      const title = document.createElement('div');
+      title.className = 'isl-compatToastTitle';
+      title.textContent = copy.compatTitle;
+      const text = document.createElement('div');
+      text.className = 'isl-compatToastText';
+      text.textContent = copy.compatBody;
+      const action = document.createElement('div');
+      action.className = 'isl-compatToastAction';
+      action.textContent = copy.compatView;
+      body.append(title, text, action);
+
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'isl-compatToastClose';
+      close.setAttribute('aria-label', copy.compatDismiss);
+      close.textContent = '\u00d7';
+
+      let timer = null;
+      let closed = false;
+      const dismiss = () => {
+        if (closed) return;
+        closed = true;
+        if (timer !== null) window.clearTimeout(timer);
+        host.classList.remove('is-visible');
+        window.setTimeout(() => host.remove(), 200);
+      };
+
+      const openSection = () => {
+        dismiss();
+        openSettings({ section: 'Islands UI' });
+      };
+
+      timer = window.setTimeout(dismiss, 5000);
+      close.addEventListener('click', (event) => {
+        event.stopPropagation();
+        dismiss();
+      });
+      host.addEventListener('click', openSection);
+      host.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openSection();
+      });
+
+      host.append(body, close);
+      document.body.append(host);
+      requestAnimationFrame(() => host.classList.add('is-visible'));
+    }
+
     /** Islands settings page: skin switch + accent color. */
     function IslandsSettingsPage() {
       const on = useEnabled();
+      const compat = useCompat();
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      const blocked = compat.status === 'missing';
       const [accent, setAccent] = React.useState(readAccent);
       const chooseAccent = (color) => {
         setAccent(color);
@@ -1313,6 +1639,8 @@ window.__ModuleLoader__.load({
             h('div', { className: 'isl-settingsPageDesc' }, copy.description),
           ),
         ),
+        h(CompatibilityBanner, { copy, compat, onForce: forceEnable }),
+        compat.forced ? h('div', { className: 'isl-compatForced' }, copy.compatForced) : null,
         h(
           'div',
           { className: 'isl-prefRow' },
@@ -1330,7 +1658,8 @@ window.__ModuleLoader__.load({
               className: 'isl-switch',
               'aria-checked': on,
               'aria-label': copy.enable,
-              title: copy.enable,
+              title: blocked ? copy.compatBannerTitle : copy.enable,
+              disabled: blocked,
               onClick: () => setEnabled(!on),
             },
             h('span', { className: 'isl-switchThumb' }),
@@ -1403,16 +1732,13 @@ window.__ModuleLoader__.load({
           workspacesService = scope.workspaces;
         });
 
+        pluginCtx = ctx;
         localeService = ctx.locale;
         layoutService = ctx.layout;
         slotsService = ctx.slots;
-        syncAttribute();
         applyAccent(readAccent());
 
         ctx.effect(() => {
-          if (document.body !== null && !document.body.hasAttribute(ATTRIBUTE) && readStored()) {
-            document.body.setAttribute(ATTRIBUTE, '');
-          }
           const tag = document.createElement('style');
           tag.dataset.plugin = 'dsh-islands-ui';
           tag.dataset.pluginCss = 'dsh-islands-ui/islands.css';
@@ -1424,202 +1750,208 @@ window.__ModuleLoader__.load({
           };
         }, 'dsh-islands-ui: stylesheet');
 
-        ctx.effect(() => {
-          const root = document.documentElement;
-          let panel = null;
-          let styleObserver = null;
-          let mountObserver = null;
-          let locateFrame = null;
-          let retryTimer = null;
+        // Everything below turns the chrome on, so it runs only after the gate
+        // has confirmed this build still matches the stylesheet.
+        const registerSkinChrome = (ctx) => {
+          ctx.effect(() => {
+            const root = document.documentElement;
+            let panel = null;
+            let styleObserver = null;
+            let mountObserver = null;
+            let locateFrame = null;
+            let retryTimer = null;
 
-          // Publish the right pane's PREFERRED width, not the width the column
-          // currently has. The column is 0 while the pane is closed (and while
-          // the independent workspace collapse pins the right track), so a
-          // measurement-based value can never recover after the pane opens:
-          // the track would stay 0 and the panel clamp would keep it hidden.
-          // The panel itself always carries its resolved width in
-          // `--dsh-sidebar-width` (and its inline width), even while closed.
-          const publish = () => {
-            if (panel === null) return;
-            const value = (panel.style.getPropertyValue('--dsh-sidebar-width') || panel.style.width || '').trim();
-            if (value !== '') root.style.setProperty('--isl-rightbar-w', value);
-          };
+            // Publish the right pane's PREFERRED width, not the width the column
+            // currently has. The column is 0 while the pane is closed (and while
+            // the independent workspace collapse pins the right track), so a
+            // measurement-based value can never recover after the pane opens:
+            // the track would stay 0 and the panel clamp would keep it hidden.
+            // The panel itself always carries its resolved width in
+            // `--dsh-sidebar-width` (and its inline width), even while closed.
+            const publish = () => {
+              if (panel === null) return;
+              const value = (panel.style.getPropertyValue('--dsh-sidebar-width') || panel.style.width || '').trim();
+              if (value !== '') root.style.setProperty('--isl-rightbar-w', value);
+            };
 
-          const watch = (next) => {
-            if (next === panel) return;
-            styleObserver?.disconnect();
-            styleObserver = null;
-            panel = next;
-            if (panel === null) return;
-            styleObserver = new MutationObserver(publish);
-            styleObserver.observe(panel, { attributes: true, attributeFilter: ['style'] });
-            publish();
-          };
+            const watch = (next) => {
+              if (next === panel) return;
+              styleObserver?.disconnect();
+              styleObserver = null;
+              panel = next;
+              if (panel === null) return;
+              styleObserver = new MutationObserver(publish);
+              styleObserver.observe(panel, { attributes: true, attributeFilter: ['style'] });
+              publish();
+            };
 
-          const locate = () => {
-            locateFrame = null;
-            const next = document.querySelector('.Dv5QdW_panel');
-            watch(next);
-            if (next === null) return;
-            mountObserver?.disconnect();
-            mountObserver = null;
-            if (retryTimer !== null) {
-              clearTimeout(retryTimer);
-              retryTimer = null;
-            }
-          };
-
-          const scheduleLocate = () => {
-            if (locateFrame !== null) return;
-            locateFrame = requestAnimationFrame(locate);
-          };
-
-          locate();
-          // The client applies before the shell mounts, so the first query can
-          // miss the right pane. Watch until it appears (bounded: a profile
-          // without the right pane must not keep a document-wide observer).
-          if (panel === null && document.body !== null) {
-            mountObserver = new MutationObserver(scheduleLocate);
-            mountObserver.observe(document.body, { childList: true, subtree: true });
-            retryTimer = setTimeout(() => {
+            const locate = () => {
+              locateFrame = null;
+              const next = document.querySelector('.Dv5QdW_panel');
+              watch(next);
+              if (next === null) return;
               mountObserver?.disconnect();
               mountObserver = null;
-              retryTimer = null;
-            }, 10_000);
-          }
-
-          return () => {
-            if (locateFrame !== null) cancelAnimationFrame(locateFrame);
-            if (retryTimer !== null) clearTimeout(retryTimer);
-            mountObserver?.disconnect();
-            styleObserver?.disconnect();
-            root.style.removeProperty('--isl-rightbar-w');
-          };
-        }, 'dsh-islands-ui: rightbar width');
-
-        ctx.slots.inject('shell.overlay', () =>
-          ctx.slots.register({ name: 'shell.overlay', id: 'islands-topbar', order: -100 }, IslandsTopBar),
-        );
-
-        ctx.slots.inject('shell.overlay', () =>
-          ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail', order: -90 }, IslandsRail),
-        );
-
-        ctx.slots.inject('shell.overlay', () =>
-          ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail-settings', order: -89 }, IslandsRailSettings),
-        );
-
-        ctx.slots.inject('shell.overlay', () =>
-          ctx.slots.register({ name: 'shell.overlay', id: 'islands-pinned', order: -88 }, IslandsPinnedSection),
-        );
-
-        ctx.inject(['slots', 'modelDirectories'], (scope) => {
-          modelDirectories = scope.modelDirectories;
-          // Single slots render the lowest priority; a negative priority shadows
-          // the shipped selector without colliding with it.
-          scope.slots.inject('conversation.input.model', () =>
-            scope.slots.register({ name: 'conversation.input.model', priority: -1 }, ModelPicker),
-          );
-        });
-
-        // Take the workspace shortcut over at the shortcut service layer: fixed
-        // input listeners run before the catalog dispatch, so the DSH
-        // sidebar.left.toggle never swaps in its rail-only render tree.
-        ctx.inject(['shortcuts'], (scope) => {
-          shortcutsService = scope.shortcuts;
-
-          ctx.effect(
-            () => {
-              try {
-                return scope.shortcuts.register({
-                  id: 'islands.model.open',
-                  label: () => 'Model picker',
-                  defaults: {
-                    'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                    'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                    'desktop:linux': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                  },
-                  regions: ['page', 'editable'],
-                  modals: [],
-                  resolve: () => ({
-                    status: 'handled',
-                    run: () => window.dispatchEvent(new CustomEvent('islands:model-open')),
-                  }),
-                });
-              } catch (error) {
-                console.warn('[islands-ui] model picker shortcut unavailable', error);
-                return undefined;
+              if (retryTimer !== null) {
+                clearTimeout(retryTimer);
+                retryTimer = null;
               }
-            },
-            'dsh-islands-ui: model picker shortcut',
+            };
+
+            const scheduleLocate = () => {
+              if (locateFrame !== null) return;
+              locateFrame = requestAnimationFrame(locate);
+            };
+
+            locate();
+            // The client applies before the shell mounts, so the first query can
+            // miss the right pane. Watch until it appears (bounded: a profile
+            // without the right pane must not keep a document-wide observer).
+            if (panel === null && document.body !== null) {
+              mountObserver = new MutationObserver(scheduleLocate);
+              mountObserver.observe(document.body, { childList: true, subtree: true });
+              retryTimer = setTimeout(() => {
+                mountObserver?.disconnect();
+                mountObserver = null;
+                retryTimer = null;
+              }, 10_000);
+            }
+
+            return () => {
+              if (locateFrame !== null) cancelAnimationFrame(locateFrame);
+              if (retryTimer !== null) clearTimeout(retryTimer);
+              mountObserver?.disconnect();
+              styleObserver?.disconnect();
+              root.style.removeProperty('--isl-rightbar-w');
+            };
+          }, 'dsh-islands-ui: rightbar width');
+
+          ctx.slots.inject('shell.overlay', () =>
+            ctx.slots.register({ name: 'shell.overlay', id: 'islands-topbar', order: -100 }, IslandsTopBar),
           );
 
-          const off = scope.shortcuts.observeFixedInput((input) => {
-            if (input.type !== 'keydown') return;
-            if (!document.body.hasAttribute(ATTRIBUTE)) return;
-            const gesture = input.gesture;
-            if (gesture.code !== 'KeyB' || gesture.repeat || gesture.composing) return;
-            if (!(gesture.meta || gesture.control) || gesture.alt || gesture.shift) return;
-            const modal = input.context?.modal;
-            if (modal !== null && modal !== undefined && modal !== 'sidebar') return;
-            // Desktop delivers the platform's primary chord through the native
-            // keyboard bridge, bypassing fixed input. Let that path collapse the
-            // DSH and let the frame observer below convert it; intercepting both
-            // would toggle twice. The secondary chord is handled here.
-            const runtime = scope.shortcuts.runtime;
-            const platform = scope.shortcuts.platform;
-            const nativeOwned =
-              runtime === 'desktop' &&
-              ((platform === 'macos' && gesture.meta && !gesture.control) ||
-                (platform !== 'macos' && gesture.control && !gesture.meta));
-            if (nativeOwned) return;
-            input.consume();
-            toggleWorkspace();
-          });
-          scope.effect(() => off, 'dsh-islands-ui: workspace collapse shortcut');
-        });
+          ctx.slots.inject('shell.overlay', () =>
+            ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail', order: -90 }, IslandsRail),
+          );
 
-        // The native primary chord reaches DSH's own sidebar collapse before any
-        // fixed listener. Convert that collapse into our workspace collapse
-        // immediately (and restore the expanded sidebar render tree) so the
-        // old rail never stays on screen. Drawer mode is different: its open
-        // state is native, and the independent desktop collapse must never hide
-        // the drawer's workspace, so entering the drawer clears that attribute.
-        ctx.effect(() => {
-          let observer;
-          let timer;
-          const fix = () => {
-            const frame = document.querySelector('.PIRFFq_frame');
-            if (frame === null) return;
-            if (frame.hasAttribute('data-sidebar-drawer')) {
-              document.body.removeAttribute(WORKSPACE_ATTR);
-              return;
-            }
-            if (!frame.hasAttribute('data-sidebar-collapsed')) return;
-            const wasCollapsed = document.body.hasAttribute(WORKSPACE_ATTR);
-            if (wasCollapsed) document.body.removeAttribute(WORKSPACE_ATTR);
-            else document.body.setAttribute(WORKSPACE_ATTR, '');
-            layoutService?.toggleSidebar();
-          };
-          const attach = () => {
-            const frame = document.querySelector('.PIRFFq_frame');
-            if (frame === null) {
-              timer = window.setTimeout(attach, 200);
-              return;
-            }
-            fix();
-            observer = new MutationObserver(fix);
-            observer.observe(frame, {
-              attributes: true,
-              attributeFilter: ['data-sidebar-collapsed', 'data-sidebar-drawer'],
+          ctx.slots.inject('shell.overlay', () =>
+            ctx.slots.register({ name: 'shell.overlay', id: 'islands-rail-settings', order: -89 }, IslandsRailSettings),
+          );
+
+          ctx.slots.inject('shell.overlay', () =>
+            ctx.slots.register({ name: 'shell.overlay', id: 'islands-pinned', order: -88 }, IslandsPinnedSection),
+          );
+
+          ctx.inject(['slots', 'modelDirectories'], (scope) => {
+            modelDirectories = scope.modelDirectories;
+            // Single slots render the lowest priority; a negative priority shadows
+            // the shipped selector without colliding with it.
+            scope.slots.inject('conversation.input.model', () =>
+              scope.slots.register({ name: 'conversation.input.model', priority: -1 }, ModelPicker),
+            );
+          });
+
+          // Take the workspace shortcut over at the shortcut service layer: fixed
+          // input listeners run before the catalog dispatch, so the DSH
+          // sidebar.left.toggle never swaps in its rail-only render tree.
+          ctx.inject(['shortcuts'], (scope) => {
+            shortcutsService = scope.shortcuts;
+
+            ctx.effect(
+              () => {
+                try {
+                  return scope.shortcuts.register({
+                    id: 'islands.model.open',
+                    label: () => 'Model picker',
+                    defaults: {
+                      'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                      'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                      'desktop:linux': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                    },
+                    regions: ['page', 'editable'],
+                    modals: [],
+                    resolve: () => ({
+                      status: 'handled',
+                      run: () => window.dispatchEvent(new CustomEvent('islands:model-open')),
+                    }),
+                  });
+                } catch (error) {
+                  console.warn('[islands-ui] model picker shortcut unavailable', error);
+                  return undefined;
+                }
+              },
+              'dsh-islands-ui: model picker shortcut',
+            );
+
+            if (typeof scope.shortcuts.observeFixedInput !== 'function') return;
+          const off = scope.shortcuts.observeFixedInput((input) => {
+              if (input.type !== 'keydown') return;
+              if (!document.body.hasAttribute(ATTRIBUTE)) return;
+              const gesture = input.gesture;
+              if (gesture.code !== 'KeyB' || gesture.repeat || gesture.composing) return;
+              if (!(gesture.meta || gesture.control) || gesture.alt || gesture.shift) return;
+              const modal = input.context?.modal;
+              if (modal !== null && modal !== undefined && modal !== 'sidebar') return;
+              // Desktop delivers the platform's primary chord through the native
+              // keyboard bridge, bypassing fixed input. Let that path collapse the
+              // DSH and let the frame observer below convert it; intercepting both
+              // would toggle twice. The secondary chord is handled here.
+              const runtime = scope.shortcuts.runtime;
+              const platform = scope.shortcuts.platform;
+              const nativeOwned =
+                runtime === 'desktop' &&
+                ((platform === 'macos' && gesture.meta && !gesture.control) ||
+                  (platform !== 'macos' && gesture.control && !gesture.meta));
+              if (nativeOwned) return;
+              input.consume();
+              toggleWorkspace();
             });
-          };
-          attach();
-          return () => {
-            window.clearTimeout(timer);
-            observer?.disconnect();
-          };
-        }, 'dsh-islands-ui: native collapse conversion');
+            scope.effect(() => off, 'dsh-islands-ui: workspace collapse shortcut');
+          });
+
+          // The native primary chord reaches DSH's own sidebar collapse before any
+          // fixed listener. Convert that collapse into our workspace collapse
+          // immediately (and restore the expanded sidebar render tree) so the
+          // old rail never stays on screen. Drawer mode is different: its open
+          // state is native, and the independent desktop collapse must never hide
+          // the drawer's workspace, so entering the drawer clears that attribute.
+          ctx.effect(() => {
+            let observer;
+            let timer;
+            const fix = () => {
+              const frame = document.querySelector('.PIRFFq_frame');
+              if (frame === null) return;
+              if (frame.hasAttribute('data-sidebar-drawer')) {
+                document.body.removeAttribute(WORKSPACE_ATTR);
+                return;
+              }
+              if (!frame.hasAttribute('data-sidebar-collapsed')) return;
+              const wasCollapsed = document.body.hasAttribute(WORKSPACE_ATTR);
+              if (wasCollapsed) document.body.removeAttribute(WORKSPACE_ATTR);
+              else document.body.setAttribute(WORKSPACE_ATTR, '');
+              layoutService?.toggleSidebar();
+            };
+            const attach = () => {
+              const frame = document.querySelector('.PIRFFq_frame');
+              if (frame === null) {
+                timer = window.setTimeout(attach, 200);
+                return;
+              }
+              fix();
+              observer = new MutationObserver(fix);
+              observer.observe(frame, {
+                attributes: true,
+                attributeFilter: ['data-sidebar-collapsed', 'data-sidebar-drawer'],
+              });
+            };
+            attach();
+            return () => {
+              window.clearTimeout(timer);
+              observer?.disconnect();
+            };
+          }, 'dsh-islands-ui: native collapse conversion');
+        };
+        skinRegistrar = () => registerSkinChrome(ctx);
 
         ctx.slots.inject('settings.section', () =>
           ctx.slots.register(
@@ -1631,7 +1963,13 @@ window.__ModuleLoader__.load({
         ctx.slots.inject('settings.section.icon', () =>
           ctx.slots.register({ name: 'settings.section.icon', id: 'islands-ui' }, IslandsSectionIcon),
         );
-      },
+
+        if (isForced()) {
+          setCompat({ status: 'ok', missing: [], forced: true });
+          activate();
+          return;
+        }
+        ctx.effect(() => startCompatibilityGate(), 'dsh-islands-ui: compatibility gate');      },
     };
   },
 });

@@ -1,6 +1,6 @@
 {
   "name": "dsh-islands-ui",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Islands UI — a floating-island interface skin for DeepSeek Harness: rounded panels, a persistent left rail, a pinned-session shelf and an adjustable accent color.",
   "icon": "./assets/icon-180.png",
   "type": "module",

@@ -208,9 +208,10 @@ npm publish --access public
 
 - 皮肤是**纯客户端样式层**，不替换会话、设置或插件的数据与交互；左侧栏插件固定、置顶聚合、定位等额外能力也只在客户端完成。
 - 选择器依赖 Harness 当前构建的 CSS Module 哈希类名（如 `PIRFFq_*`、`kB3qhq_*`、`JoiKIa_*`、`_77Pn0W_*`）与少量 `data-*` 挂点；**Harness 升级或重新构建后类名可能变化，需要同步更新对应 CSS**。
+- 启动时会检测三个界面锚点（`.PIRFFq_frame`、`.PIRFFq_centerCol`、`.kB3qhq_root`）：缺失就**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。
 - 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
 - Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
-- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`；`skin.json` 为主题管理器提供 id、强调色和挂载行。
+- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的构建差异由启动时的锚点自检兜底。`skin.json` 为主题管理器提供 id、强调色和挂载行。
 
 ---
 
@@ -234,7 +235,7 @@ npm publish --access public
 
 **为什么某些界面还是旧样式？**
 
-皮肤依赖 Harness 当前构建的 CSS Module 哈希类名。DSH 升级后类名可能变化，导致部分规则失效；请更新到最新版 Islands UI，或带截图和 DSH 版本开 Issue。
+说明皮肤**检测到界面结构不匹配，已自动关闭**。DSH 升级可能改掉皮肤依赖的 CSS Module 哈希类名，半启用会变成双栏重叠，所以插件宁可保持默认外观：右下角会有提示，设置 → Islands UI 顶部有黄色说明条并列出缺失的锚点。把 Islands UI 更新到适配当前 DSH 的版本即可恢复；确认界面正常也可以点「仍然启用」临时开启（下次启动重新检测）。
 
 **Windows / Linux 能用吗？**
 
