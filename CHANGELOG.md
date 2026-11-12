@@ -23,3 +23,5 @@
 - 新增 `skin.json`，供主题管理器识别皮肤 id、强调色与挂载行。
 - 新增 MIT `LICENSE`、英文 README、`screenshots.json` 校验和发布前 `npm run check`。
 - 新增 awesome-dsh-plugin 收录模板与 npm / DSHHub / dsh-market 发布说明。
+- README 补充安装、常见问题、仓库配置、贡献与安全说明；新增英文 FAQ。
+- 新增 GitHub Actions CI / Publish 工作流、Issue / PR 模板、`CONTRIBUTING.md`、`SECURITY.md`、`.editorconfig`、`.gitattributes` 和 `.nvmrc`。

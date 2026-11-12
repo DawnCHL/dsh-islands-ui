@@ -1,0 +1,50 @@
+name: Feature request
+description: 提出新的界面能力或交互改进
+title: '[Feature]: '
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Islands UI 只做客户端界面层。请尽量说明需求属于样式、布局还是浏览器端交互，
+        以及它是否需要 host 侧能力。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决的问题
+      description: 现在的界面哪里不顺手？在什么场景下会遇到？
+      placeholder: 例如：窄屏下打开右侧栏会盖住会话标题
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的方案
+      description: 你希望界面怎么表现？可以附草图或其他产品的参考
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - 外观 / 设计 token
+        - 布局 / 响应式
+        - 左侧栏或置顶
+        - 设置页
+        - 模型 / 推理弹层
+        - 其他
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 确认
+      options:
+        - label: 这个需求可以在纯客户端样式层完成，不需要修改 Harness 的会话或数据
+          required: false
