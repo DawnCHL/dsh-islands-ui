@@ -1,7 +1,7 @@
 /* ==========================================================================
    Islands UI · 16 left rail
-   Workspace / automation / plugins, user-pinned plugin entries, and a
-   context menu for the remaining panels.
+   Every registered panel launcher lives directly in the rail. Drag an icon to
+   reorder it; right-click the rail to show or hide launchers.
    ========================================================================== */
 
 body[data-islands-ui] .isl-rail {
@@ -13,12 +13,25 @@ body[data-islands-ui] .isl-rail {
   top: calc(var(--isl-chrome-top) + var(--isl-topbar-height) + 10px);
   left: var(--isl-gap);
   z-index: 25;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   width: var(--isl-rail-width);
+  max-height: calc(100vh - var(--isl-chrome-top) - var(--isl-topbar-height) - 112px);
+  padding: 2px 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
   pointer-events: auto;
+  user-select: none;
+}
+
+body[data-islands-ui] .isl-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 body[data-islands-ui] .isl-railBtn {
@@ -34,14 +47,54 @@ body[data-islands-ui] .isl-railBtn {
   background: transparent;
   color: var(--dsw-alias-label-secondary);
   cursor: pointer;
+  touch-action: none;
   transition:
     background-color 0.12s var(--ds-ease-in-out),
-    color 0.12s var(--ds-ease-in-out);
+    color 0.12s var(--ds-ease-in-out),
+    opacity 0.12s var(--ds-ease-in-out);
 }
 
 body[data-islands-ui] .isl-railBtn:hover {
   background: var(--isl-hover);
   color: var(--dsw-alias-label-primary);
+}
+
+/* The house is a pure navigation trigger (conversation / workspace drawer),
+   not a destination in the panel model. It has no persistent selected state;
+   hover keeps the standard rail feedback and a click paints a translucent
+   ripple clipped to the rounded tile. */
+body[data-islands-ui] .isl-railBtn[data-rail-id='workspace'] {
+  position: relative;
+  overflow: hidden;
+}
+
+body[data-islands-ui] .isl-railRipple {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: isl-rail-ripple 560ms cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes isl-rail-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-islands-ui] .isl-railRipple {
+    animation-duration: 1ms;
+  }
 }
 
 body[data-islands-ui] .isl-railBtn.is-active {
@@ -54,20 +107,60 @@ body[data-islands-ui] .isl-railBtn:focus-visible {
   outline-offset: -2px;
 }
 
+body[data-islands-ui] .isl-rail.is-dragging,
+body[data-islands-ui] .isl-rail.is-dragging .isl-railBtn {
+  cursor: grabbing;
+}
+
+body[data-islands-ui] .isl-railBtn.is-dragging {
+  background: var(--isl-active);
+  opacity: 0.45;
+}
+
+/* Floating copy of the dragged icon; follows the pointer at 90% opacity. */
+body[data-islands-ui] .isl-railGhost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1200;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-md);
+  background: var(--isl-surface);
+  box-shadow: var(--isl-shadow-float);
+  color: var(--dsw-alias-label-primary);
+  opacity: 0.9;
+  pointer-events: none;
+  will-change: transform;
+}
+
+body[data-islands-ui] .isl-railAdd {
+  color: var(--dsw-alias-label-tertiary);
+}
+
 body[data-islands-ui] .isl-railDivider {
+  flex: none;
   width: 24px;
   height: 1px;
   margin: 2px 0;
   background: var(--isl-border-soft);
 }
 
-/* ---- Plugin pin menu -------------------------------------------------- */
+/* ---- Rail management menu --------------------------------------------- */
 body[data-islands-ui] .isl-railMenu {
   position: fixed;
   z-index: 35;
   box-sizing: border-box;
-  width: 240px;
+  width: 248px;
+  max-height: min(60vh, 440px);
   padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   border: 1px solid var(--isl-border-soft);
   border-radius: var(--isl-radius-md);
   background: var(--isl-surface);
@@ -75,6 +168,7 @@ body[data-islands-ui] .isl-railMenu {
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   line-height: 20px;
+  user-select: none;
 }
 
 body[data-islands-ui] .isl-railMenuTitle {
@@ -90,7 +184,7 @@ body[data-islands-ui] .isl-railMenuRow {
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 34px;
+  min-height: 36px;
   padding: 5px 8px;
   border: 0;
   border-radius: var(--isl-radius-sm);
@@ -101,8 +195,14 @@ body[data-islands-ui] .isl-railMenuRow {
   cursor: pointer;
 }
 
-body[data-islands-ui] .isl-railMenuRow:hover {
+body[data-islands-ui] .isl-railMenuRow:hover,
+body[data-islands-ui] .isl-railMenuRow.is-current {
   background: var(--isl-hover);
+}
+
+body[data-islands-ui] .isl-railMenuRow.is-hidden .isl-railMenuIcon,
+body[data-islands-ui] .isl-railMenuRow.is-hidden .isl-railMenuText {
+  opacity: 0.5;
 }
 
 body[data-islands-ui] .isl-railMenuIcon {
@@ -135,19 +235,34 @@ body[data-islands-ui] .isl-railMenuSub {
   text-overflow: ellipsis;
 }
 
-body[data-islands-ui] .isl-railMenuPin {
-  display: inline-flex;
+body[data-islands-ui] .isl-railMenuCheck {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
   flex: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--isl-border-soft);
+  border-radius: 6px;
+  color: transparent;
+}
+
+body[data-islands-ui] .isl-railMenuCheck.is-on {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--isl-accent) 14%, transparent);
+  color: var(--isl-accent);
+}
+
+body[data-islands-ui] .isl-railMenuHint {
+  margin-top: 4px;
+  padding: 6px 8px 2px;
+  border-top: 1px solid var(--isl-border-soft);
   color: var(--dsw-alias-label-tertiary);
-  opacity: 0.35;
+  font-size: 10px;
+  line-height: 14px;
 }
 
-body[data-islands-ui] .isl-railMenuPin.is-pinned {
-  color: var(--dsw-alias-state-business-primary);
-  opacity: 1;
-}
-
-body[data-islands-ui] .isl-railEmpty {
+body[data-islands-ui] .isl-railMenuEmpty {
   padding: 8px;
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;

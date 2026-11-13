@@ -71,10 +71,12 @@ window.__ModuleLoader__.load({
         schedules: '自动化任务',
         plugins: '插件',
         settings: '设置',
-        more: '更多插件',
-        railTitle: '显示在左侧栏',
-        noExtras: '暂无其他插件',
-        pin: '固定到左侧栏',
+        railTitle: '左侧栏图标',
+        railHint: '点击切换显示；按住图标拖动可排序',
+        railShow: '显示在左侧栏',
+        railHide: '从左侧栏移除',
+        builtIn: 'DSH 内置',
+        noExtras: '左侧栏还没有图标',
         enable: '启用 Islands 界面',
         enableDesc: '关闭后立即恢复 DSH 默认外观，设置会保留。',
         accent: '强调色',
@@ -155,10 +157,12 @@ window.__ModuleLoader__.load({
         schedules: 'Automation',
         plugins: 'Plugins',
         settings: 'Settings',
-        more: 'More plugins',
-        railTitle: 'Show in the left rail',
-        noExtras: 'No other plugins',
-        pin: 'Pin to the left rail',
+        railTitle: 'Left rail icons',
+        railHint: 'Click to show or hide; drag an icon to reorder',
+        railShow: 'Show in the left rail',
+        railHide: 'Remove from the left rail',
+        builtIn: 'Built into DSH',
+        noExtras: 'No icons on the left rail',
         enable: 'Enable Islands UI',
         enableDesc: 'Turn off to restore the default appearance immediately; your settings are kept.',
         accent: 'Accent color',
@@ -237,6 +241,8 @@ window.__ModuleLoader__.load({
     let workspacesService;
     let modelDirectories;
     const RAIL_PIN_KEY = 'dsh-islands-ui:rail-pins';
+    /** Order + visibility of every left-rail panel entry. */
+    const RAIL_CONFIG_KEY = 'dsh-islands-ui:rail';
     const ACCENT_KEY = 'dsh-islands-ui:accent';
     const DEFAULT_ACCENT = '#4176e6';
     const ACCENT_PRESETS = ['#4176e6', '#7c5cff', '#1f9d63', '#e07a2e', '#d94f8a', '#d64545'];
@@ -635,11 +641,46 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function writeRailPins(pins) {
+    function uniqueRailIds(values) {
+      const seen = new Set();
+      const result = [];
+      for (const value of values) {
+        if (typeof value !== 'string' || value === '' || seen.has(value)) continue;
+        seen.add(value);
+        result.push(value);
+      }
+      return result;
+    }
+
+    /**
+     * The rail shows every panel entry by default and remembers the user's
+     * order and the entries they hid. Configurations written by 1.0.x only
+     * stored pins, so they are read once and migrated into an order prefix.
+     */
+    function readRailConfig() {
       try {
-        window.localStorage.setItem(RAIL_PIN_KEY, JSON.stringify(pins));
+        const raw = window.localStorage.getItem(RAIL_CONFIG_KEY);
+        if (raw !== null) {
+          const parsed = JSON.parse(raw);
+          return {
+            order: uniqueRailIds(Array.isArray(parsed?.order) ? parsed.order : []),
+            hidden: uniqueRailIds(Array.isArray(parsed?.hidden) ? parsed.hidden : []),
+          };
+        }
       } catch {
-        /* private mode: keep the session pins only. */
+        /* fall through to the legacy pin list */
+      }
+      return { order: uniqueRailIds(['schedules', 'plugins', ...readRailPins()]), hidden: [] };
+    }
+
+    function writeRailConfig(config) {
+      try {
+        window.localStorage.setItem(RAIL_CONFIG_KEY, JSON.stringify(config));
+        // The legacy key only seeds the first migration; drop it once the new
+        // configuration exists so clearing that key really resets the rail.
+        window.localStorage.removeItem(RAIL_PIN_KEY);
+      } catch {
+        /* private mode: keep the arrangement for this session only. */
       }
     }
 
@@ -667,11 +708,14 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M7 3v4M13 3v4M5 7h10v3a5 5 0 0 1-10 0V7ZM10 15v3', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
-    function EllipsisGlyph() {
-      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'currentColor', 'aria-hidden': true },
-        h('circle', { cx: 5, cy: 10, r: 1.4 }),
-        h('circle', { cx: 10, cy: 10, r: 1.4 }),
-        h('circle', { cx: 15, cy: 10, r: 1.4 }));
+    function CheckGlyph() {
+      return h('svg', { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'm3 8.4 3.2 3.2L13 4.8', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    function PlusGlyph() {
+      return h('svg', { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M10 4v12M4 10h12', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' }));
     }
 
     function GearGlyph() {
@@ -827,36 +871,104 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Left rail: workspace home, automation, plugins, user-pinned plugins and
-     * a context menu for the rest.
+     * Left rail: the workspace home plus every panel launcher registered in
+     * `sidebar.panellist`. Entries are shown directly, reordered by dragging,
+     * and shown or hidden from the right-click management menu.
      */
     function IslandsRail({ usePanelInfo }) {
       const active = usePanelInfo((info) => info.activePanelId ?? null);
-      const [pins, setPins] = React.useState(readRailPins);
-      const [open, setOpen] = React.useState(false);
-      const [position, setPosition] = React.useState(null);
+      const [config, setConfig] = React.useState(readRailConfig);
+      const [menu, setMenu] = React.useState(null);
+      const [dragId, setDragId] = React.useState(null);
+      const [ripples, setRipples] = React.useState([]);
+      const rippleSeq = React.useRef(0);
+      const [, refreshEntries] = React.useState(0);
       const railRef = React.useRef(null);
       const menuRef = React.useRef(null);
+      const itemRefs = React.useRef(new Map());
+      const configRef = React.useRef(config);
+      const dragRef = React.useRef(null);
+      const suppressClickRef = React.useRef(false);
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      configRef.current = config;
 
       const allEntries = (() => {
         try {
-          return (slotsService?.entriesOfSlot('sidebar.panellist') ?? []).map((entry) => ({
-            id: entry.options.id,
-            order: entry.options.order ?? 0,
-            label: typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label,
-            registrant: entry.registrant,
-            component: entry.component,
-          }));
+          const seen = new Set();
+          return (slotsService?.entriesOfSlot('sidebar.panellist') ?? []).flatMap((entry) => {
+            const id = entry.options.id;
+            if (typeof id !== 'string' || id === '' || seen.has(id)) return [];
+            seen.add(id);
+            return [{
+              id,
+              order: entry.options.order ?? 0,
+              label: typeof entry.options.label === 'function' ? entry.options.label() : entry.options.label,
+              registrant: entry.registrant,
+              component: entry.component,
+            }];
+          });
         } catch {
           return [];
         }
       })();
 
       const byId = new Map(allEntries.map((entry) => [entry.id, entry]));
-      const entries = allEntries.filter((entry) => entry.id !== 'plugins' && entry.id !== 'schedules');
-      const pinned = pins.filter((id) => entries.some((entry) => entry.id === id));
+      const storedIndex = new Map(config.order.map((id, index) => [id, index]));
+      // The two shipped panels lead on a fresh install; every other launcher
+      // follows registration order until the user drags it somewhere else.
+      const defaultIds = [
+        ...['schedules', 'plugins'].filter((id) => byId.has(id)),
+        ...allEntries.map((entry) => entry.id).filter((id) => id !== 'schedules' && id !== 'plugins'),
+      ];
+      const defaultIndex = new Map(defaultIds.map((id, index) => [id, index]));
+      const orderedEntries = [...allEntries].sort((left, right) => {
+        const leftIndex = storedIndex.get(left.id);
+        const rightIndex = storedIndex.get(right.id);
+        if (leftIndex !== undefined || rightIndex !== undefined) {
+          if (leftIndex === undefined) return 1;
+          if (rightIndex === undefined) return -1;
+          if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+        }
+        return (defaultIndex.get(left.id) ?? 0) - (defaultIndex.get(right.id) ?? 0);
+      });
+      const visible = orderedEntries.filter((entry) => !config.hidden.includes(entry.id));
+
+      // A plugin can register a panel after the shell is already mounted.
+      React.useEffect(() => {
+        try {
+          const unsubscribe = slotsService?.subscribe?.('sidebar.panellist', () => refreshEntries((value) => value + 1));
+          return typeof unsubscribe === 'function' ? unsubscribe : undefined;
+        } catch {
+          return undefined;
+        }
+      }, []);
+
+      React.useEffect(() => {
+        if (menu === null) return;
+        const onDown = (event) => {
+          if (railRef.current?.contains(event.target) === true) return;
+          if (menuRef.current?.contains(event.target) === true) return;
+          setMenu(null);
+        };
+        const onKey = (event) => {
+          if (event.key === 'Escape') setMenu(null);
+        };
+        document.addEventListener('mousedown', onDown, true);
+        document.addEventListener('keydown', onKey, true);
+        return () => {
+          document.removeEventListener('mousedown', onDown, true);
+          document.removeEventListener('keydown', onKey, true);
+        };
+      }, [menu]);
+
+      React.useEffect(
+        () => () => {
+          dragRef.current?.detach?.();
+          dragRef.current = null;
+        },
+        [],
+      );
 
       const iconFor = (id, size) => {
         const entry = byId.get(id);
@@ -872,38 +984,64 @@ window.__ModuleLoader__.load({
         return h(PlugGlyph);
       };
 
-      React.useEffect(() => {
-        if (!open) return;
-        const onDown = (event) => {
-          if (railRef.current?.contains(event.target) === true) return;
-          if (menuRef.current?.contains(event.target) === true) return;
-          setOpen(false);
-        };
-        const onKey = (event) => {
-          if (event.key === 'Escape') setOpen(false);
-        };
-        document.addEventListener('mousedown', onDown, true);
-        document.addEventListener('keydown', onKey, true);
-        return () => {
-          document.removeEventListener('mousedown', onDown, true);
-          document.removeEventListener('keydown', onKey, true);
-        };
-      }, [open]);
-
-      const openMenu = (anchor) => {
-        const rect = (anchor ?? railRef.current)?.getBoundingClientRect();
-        if (!rect) return;
-        setPosition({ left: rect.right + 8, top: Math.min(rect.top, window.innerHeight - 260) });
-        setOpen(true);
+      // Official panels are registered by the bundled web-client fiber, whose
+      // internal name is `wc`; that code means nothing in the UI. Third-party
+      // entries keep their package name so the owner is still recognizable.
+      const ownerFor = (registrant) => {
+        if (typeof registrant !== 'string') return undefined;
+        const code = registrant.trim();
+        if (code === '') return undefined;
+        // The bundled client reports the fiber as `WC` (older bundles may use
+        // lower case); both are the same internal name, not a plugin name.
+        return code.toLowerCase() === 'wc' ? copy.builtIn : code;
       };
 
-      const togglePin = (id) => {
-        const next = pins.includes(id) ? pins.filter((value) => value !== id) : [...pins, id];
-        setPins(next);
-        writeRailPins(next);
+      const labelFor = (id) => {
+        const entry = byId.get(id);
+        const label = entry?.label ?? id;
+        const owner = ownerFor(entry?.registrant);
+        return owner === undefined ? label : `${label} · ${owner}`;
+      };
+
+      const openMenuAt = (x, y, contextId) => {
+        const width = 248;
+        const height = Math.min(window.innerHeight - 16, 76 + orderedEntries.length * 36);
+        const left = Math.max(8, Math.min(x, window.innerWidth - width - 8));
+        const top = y + height + 8 <= window.innerHeight ? y : Math.max(8, y - height);
+        setMenu({ left, top, contextId });
+      };
+
+      const toggleHidden = (id) => {
+        const current = configRef.current;
+        const hidden = current.hidden.includes(id)
+          ? current.hidden.filter((value) => value !== id)
+          : [...current.hidden, id];
+        const next = { order: current.order, hidden };
+        configRef.current = next;
+        setConfig(next);
+        writeRailConfig(next);
+      };
+
+      const addRipple = (event) => {
+        const button = event.currentTarget;
+        if (button === null) return;
+        const rect = button.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height) * 2.4;
+        // Keyboard activation (Enter/Space) reports detail 0 and no pointer
+        // position; centre the ripple on the tile instead.
+        const centered = event.detail === 0 || (event.clientX === 0 && event.clientY === 0);
+        const x = centered ? rect.width / 2 : event.clientX - rect.left;
+        const y = centered ? rect.height / 2 : event.clientY - rect.top;
+        const key = `ripple-${rippleSeq.current++}`;
+        setRipples((values) => [...values, { key, x, y, size }]);
+      };
+
+      const removeRipple = (key) => {
+        setRipples((values) => values.filter((value) => value.key !== key));
       };
 
       const select = (id) => {
+        setMenu(null);
         // The home button is the workspace drawer's opener in the narrow
         // layout; on desktop it returns to the conversation as before.
         if (id === null) {
@@ -916,22 +1054,176 @@ window.__ModuleLoader__.load({
         layoutService?.selectPanel(id);
       };
 
-      const button = (id, label, glyph, extraClass) =>
-        h(
+      const autoScroll = (clientY) => {
+        const rail = railRef.current;
+        if (rail === null) return;
+        const rect = rail.getBoundingClientRect();
+        if (clientY < rect.top + 32) rail.scrollTop -= 12;
+        else if (clientY > rect.bottom - 32) rail.scrollTop += 12;
+      };
+
+      const beforeIdAt = (clientY, id) => {
+        for (const entry of visible) {
+          if (entry.id === id) continue;
+          const node = itemRefs.current.get(entry.id);
+          if (node === undefined) continue;
+          const rect = node.getBoundingClientRect();
+          if (clientY < rect.top + rect.height / 2) return entry.id;
+        }
+        return null;
+      };
+
+      const moveEntryBefore = (id, beforeId) => {
+        const current = configRef.current;
+        const baseOrder = orderedEntries.map((entry) => entry.id);
+        const currentOrder = uniqueRailIds([...current.order, ...baseOrder]);
+        const without = currentOrder.filter((value) => value !== id);
+        let index = beforeId === null ? without.length : without.indexOf(beforeId);
+        if (index === -1) index = without.length;
+        without.splice(index, 0, id);
+        if (without.length === currentOrder.length && without.every((value, at) => value === currentOrder[at])) return;
+        const next = { order: without, hidden: current.hidden };
+        configRef.current = next;
+        setConfig(next);
+      };
+
+      const beginDrag = (event, id) => {
+        if (event.button !== 0 || dragRef.current !== null) return;
+        const pointerId = event.pointerId;
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const source = event.currentTarget;
+        const origin = source.getBoundingClientRect();
+        const state = {
+          id,
+          active: false,
+          detach: null,
+          ghost: null,
+          offsetX: startX - origin.left,
+          offsetY: startY - origin.top,
+        };
+        const positionGhost = (x, y) => {
+          if (state.ghost === null) return;
+          state.ghost.style.transform = `translate3d(${x - state.offsetX}px, ${y - state.offsetY}px, 0)`;
+        };
+        const detach = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp, true);
+          window.removeEventListener('pointercancel', onUp, true);
+          if (state.ghost !== null) {
+            state.ghost.remove();
+            state.ghost = null;
+          }
+        };
+        const onMove = (moveEvent) => {
+          if (moveEvent.pointerId !== pointerId) return;
+          if (!state.active) {
+            if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) < 4) return;
+            state.active = true;
+            suppressClickRef.current = true;
+            setDragId(id);
+            setMenu(null);
+            // Clone the rendered icon so the ghost keeps the exact glyph and
+            // size of the row, then park it under the pointer at the grab
+            // offset. It must never intercept pointer events.
+            const ghost = source.cloneNode(true);
+            ghost.className = 'isl-railGhost';
+            ghost.removeAttribute('data-rail-id');
+            ghost.removeAttribute('data-draggable');
+            ghost.removeAttribute('title');
+            ghost.removeAttribute('aria-label');
+            ghost.removeAttribute('aria-pressed');
+            ghost.setAttribute('aria-hidden', 'true');
+            ghost.tabIndex = -1;
+            state.ghost = ghost;
+            positionGhost(moveEvent.clientX, moveEvent.clientY);
+            document.body.appendChild(ghost);
+          }
+          moveEvent.preventDefault();
+          positionGhost(moveEvent.clientX, moveEvent.clientY);
+          autoScroll(moveEvent.clientY);
+          moveEntryBefore(id, beforeIdAt(moveEvent.clientY, id));
+        };
+        const onUp = (upEvent) => {
+          if (upEvent.pointerId !== pointerId) return;
+          detach();
+          dragRef.current = null;
+          if (!state.active) return;
+          upEvent.preventDefault();
+          setDragId(null);
+          writeRailConfig(configRef.current);
+          // The click that follows a drag must not select the icon; clear the
+          // guard after the browser has dispatched it.
+          window.setTimeout(() => {
+            suppressClickRef.current = false;
+          }, 0);
+        };
+        state.detach = detach;
+        dragRef.current = state;
+        window.addEventListener('pointermove', onMove, { passive: false });
+        window.addEventListener('pointerup', onUp, true);
+        window.addEventListener('pointercancel', onUp, true);
+      };
+
+      const button = (id, label, glyph, extraClass, draggable = false) => {
+        // The house is a navigation trigger (conversation / workspace drawer),
+        // not a destination in the panel model. It therefore never carries the
+        // persistent selected fill; hover and focus still show that it is live.
+        const selected = id !== null && active === id;
+        // `dragId` is null while idle, so the house (id null) must not match it.
+        const dragging = id !== null && dragId === id;
+        return h(
           'button',
           {
             type: 'button',
-            className: 'isl-railBtn' + (active === id ? ' is-active' : '') + (extraClass ? ` ${extraClass}` : ''),
+            key: id ?? 'workspace',
+            ref: draggable
+              ? (node) => {
+                  if (node === null) itemRefs.current.delete(id);
+                  else itemRefs.current.set(id, node);
+                }
+              : undefined,
+            className:
+              'isl-railBtn' +
+              (selected ? ' is-active' : '') +
+              (dragging ? ' is-dragging' : '') +
+              (extraClass ? ` ${extraClass}` : ''),
             title: label,
             'aria-label': label,
-            'aria-pressed': active === id,
+            'aria-pressed': id === null ? undefined : selected,
             'data-rail-id': id ?? 'workspace',
-            onClick: () => select(id),
+            'data-draggable': draggable ? '' : undefined,
+            onClick: (event) => {
+              if (suppressClickRef.current) {
+                suppressClickRef.current = false;
+                return;
+              }
+              if (id === null) addRipple(event);
+              select(id);
+            },
+            onPointerDown: draggable ? (event) => beginDrag(event, id) : undefined,
           },
           glyph,
+          id === null
+            ? ripples.map((ripple) =>
+                h('span', {
+                  key: ripple.key,
+                  className: 'isl-railRipple',
+                  'aria-hidden': true,
+                  style: {
+                    left: `${ripple.x}px`,
+                    top: `${ripple.y}px`,
+                    width: `${ripple.size}px`,
+                    height: `${ripple.size}px`,
+                  },
+                  onAnimationEnd: () => removeRipple(ripple.key),
+                }),
+              )
+            : null,
         );
+      };
 
-      const menu = open && position !== null
+      const menuNode = menu !== null
         ? ReactDOM.createPortal(
             h(
               'div',
@@ -939,41 +1231,46 @@ window.__ModuleLoader__.load({
                 ref: menuRef,
                 className: 'isl-railMenu',
                 role: 'menu',
-                style: { left: position.left, top: position.top },
+                style: { left: menu.left, top: menu.top },
+                onContextMenu: (event) => event.preventDefault(),
               },
               h('div', { className: 'isl-railMenuTitle' }, copy.railTitle),
-              entries.length === 0
-                ? h('div', { className: 'isl-railEmpty' }, copy.noExtras)
-                : entries.map((entry) =>
-                    h(
+              orderedEntries.length === 0
+                ? h('div', { className: 'isl-railMenuEmpty' }, copy.noExtras)
+                : orderedEntries.map((entry) => {
+                    const shown = !config.hidden.includes(entry.id);
+                    const owner = ownerFor(entry.registrant);
+                    return h(
                       'button',
                       {
                         type: 'button',
                         key: entry.id,
-                        className: 'isl-railMenuRow',
+                        className:
+                          'isl-railMenuRow' +
+                          (menu.contextId === entry.id ? ' is-current' : '') +
+                          (shown ? '' : ' is-hidden'),
                         role: 'menuitemcheckbox',
-                        'aria-checked': pins.includes(entry.id),
-                        onClick: () => togglePin(entry.id),
+                        'aria-checked': shown,
+                        title: shown ? copy.railHide : copy.railShow,
+                        onClick: () => toggleHidden(entry.id),
                       },
                       h('span', { className: 'isl-railMenuIcon' }, iconFor(entry.id, 16)),
                       h(
                         'span',
                         { className: 'isl-railMenuText' },
                         h('span', { className: 'isl-railMenuLabel' }, entry.label ?? entry.id),
-                        entry.registrant === undefined
+                        owner === undefined
                           ? null
-                          : h('span', { className: 'isl-railMenuSub' }, entry.registrant),
+                          : h('span', { className: 'isl-railMenuSub' }, owner),
                       ),
                       h(
                         'span',
-                        {
-                          className: 'isl-railMenuPin' + (pins.includes(entry.id) ? ' is-pinned' : ''),
-                          title: copy.pin,
-                        },
-                        h(PinGlyph),
+                        { className: 'isl-railMenuCheck' + (shown ? ' is-on' : ''), 'aria-hidden': true },
+                        shown ? h(CheckGlyph) : null,
                       ),
-                    ),
-                  ),
+                    );
+                  }),
+              h('div', { className: 'isl-railMenuHint' }, copy.railHint),
             ),
             document.body,
           )
@@ -983,39 +1280,43 @@ window.__ModuleLoader__.load({
         'nav',
         {
           ref: railRef,
-          className: 'isl-rail',
+          className: 'isl-rail' + (dragId === null ? '' : ' is-dragging'),
           'aria-label': copy.workspace,
           onContextMenu: (event) => {
             event.preventDefault();
-            openMenu(event.currentTarget);
+            const target = event.target instanceof Element ? event.target.closest('[data-rail-id]') : null;
+            const id = target?.getAttribute('data-rail-id') ?? null;
+            const anchor = target?.getBoundingClientRect() ?? railRef.current?.getBoundingClientRect();
+            // Shift+F10 and the context-menu key dispatch a contextmenu event
+            // without a pointer position; anchor that menu on the focused row.
+            const point = event.clientX === 0 && event.clientY === 0
+              ? { x: (anchor?.right ?? 48) + 8, y: anchor?.top ?? 8 }
+              : { x: event.clientX, y: event.clientY };
+            openMenuAt(point.x, point.y, id === 'workspace' ? null : id);
           },
         },
         button(null, copy.workspace, h(HouseGlyph)),
-        button('schedules', copy.schedules, iconFor('schedules', 18)),
-        button('plugins', copy.plugins, iconFor('plugins', 18)),
-        pinned.map((id) => {
-          const entry = entries.find((value) => value.id === id);
-          const label = entry?.registrant === undefined ? entry?.label ?? id : `${entry?.label ?? id} · ${entry.registrant}`;
-          return button(id, label, iconFor(id, 18));
-        }),
         h('div', { className: 'isl-railDivider', 'aria-hidden': true }),
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'isl-railBtn is-more' + (open ? ' is-active' : ''),
-            title: copy.more,
-            'aria-label': copy.more,
-            'aria-haspopup': 'menu',
-            'aria-expanded': open,
-            onClick: (event) => {
-              if (open) setOpen(false);
-              else openMenu(event.currentTarget);
-            },
-          },
-          h(EllipsisGlyph),
-        ),
-        menu,
+        visible.map((entry) => button(entry.id, labelFor(entry.id), iconFor(entry.id, 18), null, true)),
+        visible.length === 0
+          ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'isl-railBtn isl-railAdd',
+                title: copy.railTitle,
+                'aria-label': copy.railTitle,
+                'aria-haspopup': 'menu',
+                'aria-expanded': menu !== null,
+                onClick: (event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  openMenuAt(rect.right + 8, rect.top, null);
+                },
+              },
+              h(PlusGlyph),
+            )
+          : null,
+        menuNode,
       );
     }
 

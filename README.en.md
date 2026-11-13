@@ -47,7 +47,7 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | | Feature | Details |
 | :---: | --- | --- |
 | 🏝 | **Floating islands** | Canvas, conversation, workspace, right sidebar and bottom panel become separate rounded surfaces; flat, no drop shadows, separated by color and a 1px hairline |
-| 🧭 | **Persistent rail** | Workspace / automation / plugins / pinned plugins / more; right-click or “…” opens the plugin pin menu |
+| 🧭 | **Persistent rail** | Workspace plus every plugin launcher, shown inline; the home button is a pure conversation / workspace-drawer trigger with no selected state (subtle hover and a translucent click ripple); click a panel to open it, drag to reorder with a floating preview, right-click to show or hide |
 | ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color and follow-theme |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
 | 🌙 | **Dark mode** | Full dark token set: near-black canvas, dark islands, translucent interaction layers |
@@ -113,7 +113,7 @@ Stored in `localStorage`; clear these keys to reset:
 | `dsh-islands-ui:enabled` | `1` / `0`, master switch |
 | `dsh-islands-ui:accent` | Custom accent color; absent means follow theme |
 | `dsh-islands-ui:pinned-collapsed` | Whether the pinned group is collapsed |
-| `dsh-islands-ui:rail-pins` | Extra plugin ids pinned to the left rail |
+| `dsh-islands-ui:rail` | Left-rail icon order and hidden entries |
 
 ---
 
@@ -124,7 +124,7 @@ src/
   00-tokens.css        design tokens + --dsw-* aliases (single source of truth)
   10-shell.css         three-column shell → canvas + islands
   15-topbar.css        window top bar
-  16-rail.css          left icon rail, plugin pin menu, settings gear
+  16-rail.css          left icon rail, drag reorder, show/hide menu, settings gear
   17-update.css        desktop update entry, state styles, 3×3 dot-matrix loaders
   20-sidebar.css       workspace island, pinned shelf, session row states
   30-conversation.css  conversation page, composer, top tool group
