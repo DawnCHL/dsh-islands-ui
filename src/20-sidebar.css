@@ -266,8 +266,10 @@ body[data-islands-ui] [data-islands-part~="sidebar-collapsed"] [data-islands-par
 }
 
 /* The window top bar / rail own the collapse controls; the in-island toggle
-   would duplicate them at every width. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="sidebar-toggle"] {
+   would duplicate them at every width. Windows is the exception: DSH pins its
+   native toggle in the caption row, so there the skin must not hide or restyle
+   it — the top bar drops its own copy and leaves the native control alone. */
+html:not([data-windows-titlebar]) body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="sidebar-toggle"] {
   display: none;
 }
 
@@ -374,9 +376,20 @@ body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sid
 }
 
 /* ---- Custom rail replaces the shipped brand + panel icon column ---------- */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="logo-row"],
+/* Windows is the one platform that keeps the logo row in the tree: DSH's
+   fixed caption-row toggle is a child, and `display: none` on the ancestor
+   would remove the native button. The row loses its own box below instead. */
+html:not([data-windows-titlebar]) body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="logo-row"],
 body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="panel-list"] {
   display: none !important;
+}
+
+html[data-windows-titlebar] body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="logo-row"] {
+  display: contents;
+}
+
+html[data-windows-titlebar] body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="logo-row"] [data-islands-part~="brand-button"] {
+  display: none;
 }
 
 /* ---- Aggregate pinned sessions ------------------------------------------ */

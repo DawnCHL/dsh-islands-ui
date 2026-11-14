@@ -152,9 +152,12 @@ body[data-islands-ui][data-ds-dark-theme] * {
   --dsw-shadow-lv3: 0 0 1px rgba(0, 0, 0, 0.6), 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* Windows keeps its native title bar above the app top bar. */
+/* Windows keeps its native title bar above the app top bar. The title bar is
+   the only chrome there: the island top bar is not rendered, so its 40px
+   reservation collapses and the islands start directly below the caption. */
 html[data-windows-titlebar] body[data-islands-ui] {
   --isl-chrome-top: var(--dsh-windows-titlebar-height, 32px);
+  --isl-topbar-height: 0px;
 }
 
 /* User-selected accent: remap the business tokens everywhere. */

@@ -65,7 +65,7 @@ The skin is a client-only style layer. Pinning helpers, the pinned shelf and the
 | Canvas | Solid `#f7f7f7` (dark `#0f1012`), opaque, no blur |
 | Islands | White / dark-gray surfaces, 16–20px radius, 1px hairline, no shadows |
 | Spacing | 5px between every island, including the bottom panel |
-| Top bar | 40px window strip; macOS clears the traffic lights, Windows/Linux starts at 8px below the native title bar |
+| Top bar | 40px window strip hosting the conversation tools and the right-panel toggle; macOS clears the traffic lights, Linux starts at 8px below the native title bar. Windows renders no island top bar: the caption row keeps the native sidebar toggle and the right-hand tools stay in the conversation header |
 | Accent | Brand blue by default; purple / green / orange / pink / red presets or any custom color |
 
 ---
@@ -75,10 +75,10 @@ The skin is a client-only style layer. Pinning helpers, the pinned shelf and the
 | Platform | Status |
 | --- | --- |
 | macOS | ✅ Tested |
-| Windows | 🟡 Custom top bar, rail, settings gear, right-sidebar toggle and model picker adapted; **not tested on a physical Windows machine** |
+| Windows | 🟡 Native title-bar layout (no island top bar), rail, right-hand native header tools, settings gear and model picker adapted; **not tested on a physical Windows machine** |
 | Linux | 🟡 Uses the same top bar and rail; **not tested** |
 
-On Windows the native title bar stays in place and the custom strip sits below it; `--dsh-windows-titlebar-height` is respected. Linux follows native window decorations, which vary by desktop environment.
+On Windows the island top bar is not rendered and the islands sit directly below the native title bar. The workspace collapse uses DSH's own sidebar button in the caption row's top-left corner, while the right-panel toggle, bottom-panel entry and session tools stay in DSH's native conversation header — position, look and hover are the host's. The rail, settings gear and shortcuts stay enabled. Linux follows native window decorations, which vary by desktop environment.
 
 If you hit a title-bar, drag-region, window-button or layout issue, please open an [issue](https://github.com/DawnCHL/dsh-islands-ui/issues) with your OS version, window size and a screenshot.
 
@@ -189,7 +189,7 @@ Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs a
 - On startup the plugin verifies the core contracts (`[data-slot="root"]`, `[data-slot="sidebar"]`) and the core parts (frame, center column, sidebar root). Only a missing core contract leaves the skin **off**; DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway". A missing decorative part only silences its own rules.
 - Settings → Islands UI shows the detected DSH release and sidebar structure (`flat` / `scroll`, inferred from the parts present) for support triage.
 - Dark mode follows `data-ds-dark-theme`; the accent remaps `--dsw-alias-state-business-primary`, so it affects both the skin and native buttons.
-- Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height`; Linux currently follows native window decorations.
+- Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height` and renders no island top bar; Linux currently follows native window decorations.
 - `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade. Structure drift inside the line is handled by one stylesheet keyed on the parts present, no longer by a version-selected variant. `skin.json` gives theme managers the id, accent and mount row.
 
 ---
@@ -218,7 +218,7 @@ A DSH upgrade can change a host local name or a contract. The affected rule goes
 
 **Windows / Linux?**
 
-The top bar, rail, right-panel toggle and title-bar height are adapted, but neither has been tested on a physical machine. Please report title-bar, drag-region or window-button issues using the issue template.
+The native title bar (no island top bar on Windows), rail, right-hand native header tools, right-panel toggle and title-bar height are adapted, but neither platform has been tested on a physical machine. Please report title-bar, drag-region or window-button issues using the issue template.
 
 **Will it be in plugin stores?**
 

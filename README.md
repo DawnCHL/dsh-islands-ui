@@ -86,7 +86,7 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | 画布 | 纯色 `#f7f7f7`（深色 `#0f1012`），不透明、无毛玻璃 |
 | 岛屿 | 白色 / 深灰表面，16–20px 圆角，1px 发丝描边，无投影 |
 | 间距 | 所有岛屿统一 5px 间隙，左右、顶部、底部、底部面板四周一致 |
-| 顶部栏 | 40px 窗口栏，承载工作区折叠、对话工具组和右侧栏开关；macOS 避开红绿灯，Windows/Linux 从 8px 开始 |
+| 顶部栏 | 40px 窗口栏，承载对话工具组和右侧栏开关；macOS 避开红绿灯，Linux 从 8px 开始。Windows 不渲染该顶栏：标题栏保留原生侧栏开关，右侧工具回到会话头原生位置 |
 | 强调色 | 默认品牌蓝，可改为紫 / 绿 / 橙 / 粉 / 红或任意取色 |
 
 ### 常用快捷键
@@ -110,10 +110,10 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | 平台 | 状态 |
 | --- | --- |
 | macOS | ✅ 已实测（开发与日常使用环境） |
-| Windows | 🟡 已适配自定义顶栏、左侧栏、设置齿轮、右侧开关、置顶聚合与模型弹层，并在原生标题栏下方预留高度；**尚未在真实 Windows 电脑上实测** |
+| Windows | 🟡 已适配原生标题栏布局（不渲染插件顶栏）、左侧栏、设置齿轮、右侧工具原生位置、置顶聚合与模型弹层；**尚未在真实 Windows 电脑上实测** |
 | Linux | 🟡 使用同一套顶栏与左侧栏；**尚未实测** |
 
-Windows 下保留 Harness 原生标题栏，自定义顶栏显示在它下方；左侧栏、设置齿轮、右侧栏开关和快捷键均已启用。Linux 按原生窗口装饰处理，不同桌面环境可能有差异。
+Windows 下不渲染插件顶栏，岛屿直接接在原生标题栏下方；工作区折叠使用标题栏左上角的 DSH 原生侧栏按钮，右侧栏开关、底部面板入口与会话工具留在 DSH 原生的会话头位置（位置、外观与悬停都交给宿主）。左侧栏、设置齿轮和快捷键均已启用。Linux 按原生窗口装饰处理，不同桌面环境可能有差异。
 
 > **反馈**：如果你在 Windows 或 Linux 上遇到标题栏高度、拖拽区域、窗口按钮重叠、布局错位或快捷键问题，欢迎提交 [Issue](https://github.com/DawnCHL/dsh-islands-ui/issues) 或 PR，附系统版本、窗口尺寸和截图即可。
 
@@ -204,7 +204,7 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 - 启动时只校验核心契约（`[data-slot="root"]`、`[data-slot="sidebar"]`）和核心部件（frame、center column、sidebar root）；核心契约缺失时才**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。单个装饰部件缺失只让对应规则失效，不会关掉整个皮肤。
 - 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构（`flat` / `scroll`，由部件是否存在推断），便于排查升级后的样式问题。
 - 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
-- Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
+- Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏，并且不渲染插件顶栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
 - `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的结构差异由同一张样式表按部件是否存在处理，不再按版本注入方言。`skin.json` 为主题管理器提供 id、强调色和挂载行。
 
 ---
@@ -233,7 +233,7 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 
 **Windows / Linux 能用吗？**
 
-已按自定义顶栏、左侧栏、右侧栏开关和标题栏高度适配，但还没有在真实 Windows / Linux 机器上实测。遇到标题栏、拖拽区或窗口按钮问题，欢迎按 Issue 模板反馈。
+已按原生标题栏（Windows 不渲染插件顶栏）、左侧栏、右侧工具原生位置和标题栏高度适配，但还没有在真实 Windows / Linux 机器上实测。遇到标题栏、拖拽区或窗口按钮问题，欢迎按 Issue 模板反馈。
 
 **会发到插件商店吗？**
 

@@ -1,8 +1,8 @@
 /* ==========================================================================
    Islands UI · 15 top bar
-   A window-chrome strip above the three islands. It clears the macOS traffic
-   lights, hosts the workspace collapse control, and leaves the content area
-   completely free for the islands.
+   A window-chrome strip above the three islands on platforms that need one.
+   It clears the macOS traffic lights and docks the header tools; Windows
+   renders neither, using its native caption row and conversation header.
    ========================================================================== */
 
 /* Registered even when the skin is off; the base rule keeps it out of the way. */
@@ -60,6 +60,12 @@ body[data-islands-ui] .isl-topbarDrag {
   margin-right: 250px;
   pointer-events: auto;
   -webkit-app-region: drag;
+}
+
+/* Windows has no island top bar: every control lives in the native caption row
+   or the conversation header, so the strip and its 40px reservation are gone. */
+html[data-windows-titlebar] body[data-islands-ui] .isl-topbar {
+  display: none;
 }
 
 body[data-islands-ui] .isl-topbarToggle {

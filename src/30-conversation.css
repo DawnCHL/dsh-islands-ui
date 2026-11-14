@@ -91,7 +91,10 @@ body[data-islands-ui] [data-conversation-tabs] [role="tab"][aria-selected="true"
    with the workspace toggle on the left.
    ========================================================================== */
 @media (min-width: 768px) {
-  body[data-islands-ui] [data-islands-part~="header-utilities"] {
+  /* Windows leaves these controls in the conversation header: the native
+     caption row already exists, so the skin keeps no extra strip to dock
+     them into. */
+  html:not([data-windows-titlebar]) body[data-islands-ui] [data-islands-part~="header-utilities"] {
     position: fixed;
     top: calc(var(--isl-chrome-top) + 10px);
     right: 41px; /* frame gap 5 + corner 28 + gap 8 */
@@ -101,7 +104,7 @@ body[data-islands-ui] [data-conversation-tabs] [role="tab"][aria-selected="true"
     align-items: center;
   }
 
-  body[data-islands-ui] [data-islands-part~="header-corner"] {
+  html:not([data-windows-titlebar]) body[data-islands-ui] [data-islands-part~="header-corner"] {
     position: fixed;
     top: calc(var(--isl-chrome-top) + 10px);
     right: var(--isl-gap);
@@ -115,9 +118,10 @@ body[data-islands-ui] [data-conversation-tabs] [role="tab"][aria-selected="true"
 /* ==========================================================================
    Always-visible right sidebar toggle
    The native header button unmounts while the panel is open and the panel
-   carries its own collapse control. The top bar owns one persistent toggle
-   instead, and closes through the native collapse action. It applies at every
-   width: the narrow top bar keeps the same control.
+   carries its own collapse control. On every platform except Windows the top
+   bar owns one persistent toggle instead, and closes through the native
+   collapse action. Windows keeps DSH's own controls: the header corner opens
+   the panel and the panel header closes it.
    ========================================================================== */
 /* Body-portaled (see RightPanelToggle): keep it out of the DOM flow while the
    skin is off, so the base rule cannot leak a raw button into the page. */
@@ -161,9 +165,15 @@ body[data-islands-ui] .isl-rightToggle:focus-visible {
   outline-offset: -2px;
 }
 
-/* The top bar owns open and close; the island's own expand/collapse
-   controls would duplicate it. */
-body[data-islands-ui] [data-sidebar-right-expand] {
+/* Windows has no island top bar, so the portalled copy steps aside and DSH's
+   own expand/collapse buttons below are left alone. */
+html[data-windows-titlebar] body[data-islands-ui] .isl-rightToggle {
+  display: none;
+}
+
+/* Outside Windows the top bar owns open and close; the island's own
+   expand/collapse controls would duplicate it. */
+html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-expand] {
   /* Keep the native expand button's box in the layout even though the top
      bar's toggle paints over it. Other header plugins anchor to this
      button's rect (dsh-better-sidebar's blank-session dock fallback does),
@@ -173,6 +183,6 @@ body[data-islands-ui] [data-sidebar-right-expand] {
   pointer-events: none !important;
 }
 
-body[data-islands-ui] [data-sidebar-right-toggle] {
+html:not([data-windows-titlebar]) body[data-islands-ui] [data-sidebar-right-toggle] {
   display: none !important;
 }
