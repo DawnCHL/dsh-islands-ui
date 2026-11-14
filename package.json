@@ -79,7 +79,7 @@
     "prepublishOnly": "npm run build && npm run check",
     "check:css": "node scripts/check-css.mjs",
     "check:parts": "node scripts/check-parts.mjs",
-    "test": "node --test test"
+    "test": "node --test"
   },
   "dsh": {
     "manifestVersion": 1,
