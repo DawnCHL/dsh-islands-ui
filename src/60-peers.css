@@ -1,0 +1,54 @@
+/* ==========================================================================
+   Islands UI · 60 peer adapters
+   Rules for plugins that mount their own surfaces inside the frame. These are
+   not host contracts: each peer owns the attributes and class names below, and
+   the core stylesheets never read them. The CSS gate allows [class*=...] only
+   in this file; a peer that renames its internals degrades these rules alone.
+   ========================================================================== */
+
+/* dsh-better-sidebar: the bottom workbench reserves its height on the
+   conversation column, not on the inner panel. `data-dsh-center-col` and
+   `--dsh-sidebar-height` are the peer's own marks. */
+body[data-islands-ui] #root [data-dsh-center-col] {
+  margin-bottom: 0;
+}
+
+body[data-islands-ui]:has([data-dsh-bottom-panel]:not([class*='Hidden'])) [data-islands-part~="center-column"] {
+  /* one gap above the panel and one below it */
+  margin-bottom: calc(var(--dsh-sidebar-height, 0px) + var(--isl-gap));
+}
+
+body[data-islands-ui] [data-dsh-bottom-panel] {
+  box-sizing: border-box;
+  /* Align the panel with the conversation island edges and let the frame
+     padding provide the bottom gap, so every island shares one gap width. */
+  margin: 0;
+  bottom: var(--isl-gap);
+  background: var(--isl-surface);
+  border: 1px solid var(--isl-border-soft);
+  border-radius: var(--isl-radius-lg);
+  box-shadow: none;
+  /* The rounded island clips its content, but NOT the height-drag strip: the
+     strip must reach into the canvas gap above the panel to be reachable
+     there. Clip the body instead (below), so the strip can overhang. */
+  overflow: visible;
+}
+
+/* Keep the island's rounded content edge with the panel's own clipping gone:
+   the body carries the radius, while the absolute resize strip and the close
+   control stay outside this clip. */
+body[data-islands-ui] [data-dsh-bottom-panel] > [class*='panelBody'] {
+  overflow: clip;
+  border-radius: calc(var(--isl-radius-lg) - 1px);
+}
+
+/* The peer centers its strip on the panel's top border (`top: -4px;
+   height: 8px`), which was right before the skin opened a canvas gap between
+   the conversation island and the panel. Anchor the 10px strip to that gap
+   instead: 5px above the border box top (the whole gap) and 5px inside the
+   panel, matching the side handles' straddle. `top` is relative to the panel's
+   padding box, hence the extra 1px border compensation. */
+body[data-islands-ui] [data-dsh-bottom-panel] > [class*='bottomResize'] {
+  top: calc(-1px - var(--isl-gap));
+  height: 10px;
+}

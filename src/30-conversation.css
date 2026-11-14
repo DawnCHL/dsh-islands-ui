@@ -2,42 +2,42 @@
    Islands UI · 30 conversation & composer
    ========================================================================== */
 
-body[data-islands-ui] .kiGsTW_root {
+body[data-islands-ui] [data-phase] {
   background: transparent;
 }
 
-body[data-islands-ui] .kiGsTW_header {
+body[data-islands-ui] [data-islands-part~="conversation-header"] {
   border-bottom-color: var(--isl-border-soft);
 }
 
-body[data-islands-ui] .kiGsTW_headerBlank {
+body[data-islands-ui] [data-islands-part~="conversation-header-blank"] {
   border-bottom-color: transparent;
 }
 
-body[data-islands-ui] .kiGsTW_scrollBody {
+body[data-islands-ui] [data-conversation-scroll] {
   margin-right: 0;
 }
 
 /* Composer: the one element that should visibly float above the island. */
-body[data-islands-ui] .JZLxKW_card {
+body[data-islands-ui] [data-composer-card] {
   background: var(--isl-surface);
   border: 1px solid var(--isl-border-soft);
   box-shadow: none;
 }
 
-body[data-islands-ui] .JZLxKW_cardWorkspaceTrigger:after {
+body[data-islands-ui] [data-islands-part~="composer-card-workspace-trigger"]:after {
   border-radius: var(--dsw-radius-panel);
   color: var(--isl-border-strong);
 }
 
-body[data-islands-ui] .JZLxKW_notice {
+body[data-islands-ui] [data-islands-part~="composer-notice"] {
   border-radius: var(--isl-radius-md);
   background: var(--isl-surface-muted);
 }
 
 /* Sticky composer seat fades into the island surface, not into a raw token. */
-body[data-islands-ui] .kiGsTW_root[data-phase='active'] .kiGsTW_composerSeat,
-body[data-islands-ui] .kiGsTW_embeddedBody[data-content-phase='active'] .kiGsTW_composerSeat {
+body[data-islands-ui] [data-phase='active'] [data-composer-seat],
+body[data-islands-ui] [data-islands-part~="embedded-body"][data-content-phase='active'] [data-composer-seat] {
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--isl-surface) 0%, transparent) 0px,
@@ -46,40 +46,40 @@ body[data-islands-ui] .kiGsTW_embeddedBody[data-content-phase='active'] .kiGsTW_
 }
 
 /* Hero: a calmer, slightly tighter headline on the open island. */
-body[data-islands-ui] ._8tPydW_headline {
+body[data-islands-ui] [data-islands-part~="hero-headline"] {
   letter-spacing: -0.01em;
 }
 
-body[data-islands-ui] ._8tPydW_workspace {
+body[data-islands-ui] [data-islands-part~="hero-workspace"] {
   border-radius: 999px;
   background: var(--isl-surface-muted);
 }
 
-body[data-islands-ui] ._8tPydW_workspace:hover {
+body[data-islands-ui] [data-islands-part~="hero-workspace"]:hover {
   background: var(--isl-hover);
 }
 
 /* Tool / turn cards keep their own hierarchy but gain island hairlines. */
-body[data-islands-ui] .CuF05a_root {
+body[data-islands-ui] [data-turn-trigger] {
   border-color: var(--isl-border-soft);
   background: var(--isl-surface-muted);
 }
 
-body[data-islands-ui] .CuF05a_root:hover {
+body[data-islands-ui] [data-turn-trigger]:hover {
   background: var(--isl-surface-sunken);
 }
 
 /* Header chips and breadcrumbs. */
-body[data-islands-ui] .kiGsTW_crumb {
+body[data-islands-ui] [data-islands-part~="header-crumb"] {
   border-radius: var(--isl-radius-sm);
 }
 
 /* View tabs sit on the island as a quiet segmented row. */
-body[data-islands-ui] .kiGsTW_viewTabs {
+body[data-islands-ui] [data-conversation-tabs] {
   gap: 22px;
 }
 
-body[data-islands-ui] .kiGsTW_tabActive:after {
+body[data-islands-ui] [data-conversation-tabs] [role="tab"][aria-selected="true"]:after {
   border-radius: 999px;
   height: 2px;
 }
@@ -91,7 +91,7 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
    with the workspace toggle on the left.
    ========================================================================== */
 @media (min-width: 768px) {
-  body[data-islands-ui] .kiGsTW_headerUtilities {
+  body[data-islands-ui] [data-islands-part~="header-utilities"] {
     position: fixed;
     top: calc(var(--isl-chrome-top) + 10px);
     right: 41px; /* frame gap 5 + corner 28 + gap 8 */
@@ -101,7 +101,7 @@ body[data-islands-ui] .kiGsTW_tabActive:after {
     align-items: center;
   }
 
-  body[data-islands-ui] .kiGsTW_headerCorner {
+  body[data-islands-ui] [data-islands-part~="header-corner"] {
     position: fixed;
     top: calc(var(--isl-chrome-top) + 10px);
     right: var(--isl-gap);
@@ -173,8 +173,6 @@ body[data-islands-ui] [data-sidebar-right-expand] {
   pointer-events: none !important;
 }
 
-body[data-islands-ui] [data-sidebar-right-toggle],
-/* dsh-sidenote's own "侧边" header entry is covered by the toggle above. */
-body[data-islands-ui] ._5KEEsG_headerSide {
+body[data-islands-ui] [data-sidebar-right-toggle] {
   display: none !important;
 }

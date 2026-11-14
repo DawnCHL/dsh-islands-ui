@@ -131,10 +131,15 @@ src/
   40-settings.css      settings dialog and section shell
   45-model-picker.css  model / reasoning popover
   50-components.css    preference rows, switches, accent picker
+  60-peers.css         third-party plugin adapters ([class*=...] is allowed only here)
+  host/runtime.js      host contracts, local-name extraction, part table, walker
   client.template.js   browser entry (React components + slot registrations)
-build.mjs              inline src/*.css into client.js
+build.mjs              inline src/*.css and host/runtime.js into client.js
 client.js              built, self-contained artifact
+scripts/check-css.mjs  selector gate
+scripts/check-parts.mjs  part-table gate
 scripts/check-package.mjs  pre-publish packaging checks
+test/                  local-name and table-integrity tests
 skin.json              theme-manager manifest
 ```
 
@@ -180,12 +185,12 @@ Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs a
 ## Compatibility
 
 - The skin is a pure client style layer and does not replace session, settings or plugin data or behavior.
-- Selectors depend on the current Harness build's CSS Module hashes (e.g. `PIRFFq_*`, `kB3qhq_*`, `JoiKIa_*`, `_77Pn0W_*`) and a few `data-*` hooks. A Harness upgrade or rebuild can change those class names and require a matching CSS update.
-- On startup the plugin verifies the layout anchors (`.PIRFFq_frame`, `.PIRFFq_centerCol`, `.kB3qhq_root`) and the sidebar structure dialect: it injects the stylesheet for the reported DSH release, then cross-checks it against the mounted DOM (`flat` / `scroll`) and switches the variant when the two disagree. Only a structure it cannot recognize leaves the skin **off**; DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway".
-- Settings → Islands UI shows the detected DSH release and sidebar structure for support triage.
+- Styles depend on two stable layers only: host contracts (`data-slot`, `data-phase`, `data-conversation-scroll`, `data-composer-card`, `data-row-key`, `role` / `aria-*`) and the skin's own part marks in `data-islands-part`. Host class names appear only as local names in the tables in `src/host/runtime.js`; a hash segment never enters a selector. A Harness rebuild that changes hashes needs no update, and a host rename makes the affected rule go quiet until one table line changes.
+- On startup the plugin verifies the core contracts (`[data-slot="root"]`, `[data-slot="sidebar"]`) and the core parts (frame, center column, sidebar root). Only a missing core contract leaves the skin **off**; DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway". A missing decorative part only silences its own rules.
+- Settings → Islands UI shows the detected DSH release and sidebar structure (`flat` / `scroll`, inferred from the parts present) for support triage.
 - Dark mode follows `data-ds-dark-theme`; the accent remaps `--dsw-alias-state-business-primary`, so it affects both the skin and native buttons.
 - Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height`; Linux currently follows native window decorations.
-- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade, while structure drift inside the line is handled by the version-selected style variants and, for an unrecognized structure, by the startup gate above. `skin.json` gives theme managers the id, accent and mount row.
+- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade. Structure drift inside the line is handled by one stylesheet keyed on the parts present, no longer by a version-selected variant. `skin.json` gives theme managers the id, accent and mount row.
 
 ---
 
@@ -209,7 +214,7 @@ Not recommended. Two skins write the same `--dsw-*` tokens and layout rules, so 
 
 **Why do some surfaces keep the old look?**
 
-Selectors depend on Harness CSS Module hashes. A DSH upgrade can rename them and disable individual rules. Update Islands UI, or open an issue with a screenshot and DSH version.
+A DSH upgrade can change a host local name or a contract. The affected rule goes quiet instead of matching a neighbour; update Islands UI, or open an issue with a screenshot and DSH version.
 
 **Windows / Linux?**
 

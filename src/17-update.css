@@ -9,12 +9,10 @@
    ========================================================================== */
 
 /* The native indicator (and its tiny toggle badge) would duplicate the rail
-   button. Keep them out of the skin; a plain browser has neither anyway.
-   0.2.2-rc.1 and rc.2 both use the G-tjAW hash. The update entry itself is a
-   shell.overlay control, so it is independent of the flat/scroll sidebar
-   variant and lives in the base sheet for every supported release. */
-body[data-islands-ui] .G-tjAW_indicator,
-body[data-islands-ui] .G-tjAW_badge {
+   button. The walker marks both seats, so the rules survive a host rebuild
+   without naming a hashed class. */
+body[data-islands-ui] [data-islands-part~="update-indicator"],
+body[data-islands-ui] [data-islands-part~="update-badge"] {
   display: none !important;
 }
 

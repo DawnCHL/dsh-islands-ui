@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.1 — 2026-11-14
+
+### 兼容性
+
+- 样式与 DOM 查询不再依赖 DSH 构建的哈希类名。新增 `src/host/runtime.js`：宿主契约、本地名提取、区域/部件表和遍历器；样式统一读 `data-islands-part` 与 `data-slot`、`data-phase` 等公开契约。宿主重新构建改变哈希时无需更新；宿主改本地名时对应规则安静失效，改部件表一行即可恢复。
+- 删除按 DSH 版本选择的 `src/variants/scroll.css` 与版本方言表；rc.1/rc.2 的侧栏结构差异由同一张样式表按部件是否存在处理。
+- 兼容门禁改为校验核心契约与核心部件；单个装饰部件缺失不再关闭整个皮肤。设置页导航改用部件查询，设置入口优先点击原生 settings 触发器。
+- 新增 `npm run check:css`、`check:parts` 与 `node --test`；构建会拒绝哈希类名、`[class*=...]`、未定义部件和作用域外的宿主选择器。
+- 第三方 dsh-better-sidebar 的底部工作台规则移到 `src/60-peers.css`；dsh-sidenote 的内部类名规则移除。
+
+### 修复
+
+- 适配 DSH 0.2.2-rc.3 新增的 `newSessionRow` 包装：新建会话行重新作为侧栏网格的第二行项，修复新建会话按钮消失、图标与左侧栏 home 图标重叠的问题。
+- 注册 `islands.model.open` 时补上 `aliases: []`，修复 rc.2 Web 端快捷键参考组件读取 `row.aliases` 时的 `TypeError`。
+
 ## 1.1.0 — 2026-11-13
 
 ### 界面

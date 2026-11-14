@@ -3,16 +3,16 @@
    The settings window is an island; its navigation is a recessed island.
    ========================================================================== */
 
-body[data-islands-ui] ._77Pn0W_overlay {
+body[data-islands-ui] [data-islands-part~="settings-overlay"] {
   background: transparent;
 }
 
-body[data-islands-ui] ._77Pn0W_mask {
+body[data-islands-ui] [data-islands-part~="settings-mask"] {
   background: var(--dsw-alias-bg-mask-1);
   backdrop-filter: var(--dsw-mask-blur);
 }
 
-body[data-islands-ui] ._77Pn0W_panel {
+body[data-islands-ui] [data-islands-part~="settings-panel"] {
   width: 860px;
   background: var(--isl-surface);
   border: 1px solid var(--isl-border-soft);
@@ -23,7 +23,7 @@ body[data-islands-ui] ._77Pn0W_panel {
   grid-template-columns: 188px minmax(0, 1fr);
 }
 
-body[data-islands-ui] ._77Pn0W_navTitle {
+body[data-islands-ui] [data-islands-part~="settings-nav-title"] {
   padding: 8px 8px 6px;
   font-size: 15px;
   font-weight: 600;
@@ -31,18 +31,18 @@ body[data-islands-ui] ._77Pn0W_navTitle {
 }
 
 /* The navigation mirrors the workspace list: no recessed panel, quiet rows. */
-body[data-islands-ui] ._77Pn0W_nav {
+body[data-islands-ui] [data-islands-part~="settings-nav"] {
   padding: 4px;
   background: transparent;
   border: 0;
   border-radius: 0;
 }
 
-body[data-islands-ui] ._77Pn0W_navList {
+body[data-islands-ui] [data-islands-part~="settings-nav-list"] {
   gap: 2px;
 }
 
-body[data-islands-ui] ._77Pn0W_navCell {
+body[data-islands-ui] [data-islands-part~="settings-nav-cell"] {
   height: 32px;
   padding: 6px 8px;
   border-radius: var(--isl-radius-sm);
@@ -52,50 +52,50 @@ body[data-islands-ui] ._77Pn0W_navCell {
   gap: 8px;
 }
 
-body[data-islands-ui] ._77Pn0W_navCell:hover {
+body[data-islands-ui] [data-islands-part~="settings-nav-cell"]:hover {
   background: var(--isl-hover);
   color: var(--dsw-alias-label-primary);
 }
 
-body[data-islands-ui] ._77Pn0W_navCell._77Pn0W_active {
+body[data-islands-ui] [data-islands-part~="settings-nav-cell"][data-islands-part~="settings-nav-active"] {
   background: var(--isl-active);
   color: var(--dsw-alias-label-primary);
   font-weight: 500;
   box-shadow: none;
 }
 
-body[data-islands-ui] ._77Pn0W_navIcon {
+body[data-islands-ui] [data-islands-part~="settings-nav-icon"] {
   width: 16px;
   height: 16px;
 }
 
-body[data-islands-ui] ._77Pn0W_navIcon svg {
+body[data-islands-ui] [data-islands-part~="settings-nav-icon"] svg {
   width: 100%;
   height: 100%;
 }
 
-body[data-islands-ui] ._77Pn0W_header {
+body[data-islands-ui] [data-islands-part~="settings-header"] {
   height: 48px;
   padding: 6px 6px 0 8px;
 }
 
-body[data-islands-ui] ._77Pn0W_options {
+body[data-islands-ui] [data-islands-part~="settings-options"] {
   padding: 0 8px 16px;
   background: transparent;
 }
 
-body[data-islands-ui] ._77Pn0W_close {
+body[data-islands-ui] [data-islands-part~="settings-close"] {
   border-radius: var(--isl-radius-sm);
 }
 
 /* Cards stay white; separation comes from hairlines, not fills. */
-body[data-islands-ui] ._77Pn0W_options [class*='_card'] {
+body[data-islands-ui] [data-islands-part~="settings-options"] [data-islands-part~="settings-card"] {
   border-radius: var(--isl-radius-lg);
   background: var(--isl-surface);
   border-color: var(--isl-border-soft);
 }
 
-body[data-islands-ui] ._77Pn0W_options [class*='_section'] {
+body[data-islands-ui] [data-islands-part~="settings-options"] [data-islands-part~="settings-section"] {
   border-radius: var(--isl-radius-md);
   background: transparent;
 }
@@ -114,14 +114,8 @@ body[data-islands-ui] [role='dialog'] {
   border-radius: var(--isl-radius-xl);
 }
 
-/* Account page hero cards. */
-body[data-islands-ui] .XGmX4q_card {
-  border-radius: var(--isl-radius-lg);
-  background: var(--isl-surface);
-  border: 1px solid var(--isl-border-soft);
-}
-
-body[data-islands-ui] ._7lc4_a_balanceCard {
+/* Account page cards. */
+body[data-islands-ui] [data-islands-part~="account-balance-card"] {
   border-radius: var(--isl-radius-lg);
   border: 1px solid var(--isl-border-soft);
   background: var(--isl-surface);

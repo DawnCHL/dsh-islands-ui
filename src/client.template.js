@@ -1,9 +1,10 @@
 /**
  * Browser half of the Islands UI skin.
  *
- * One job: publish the design-system stylesheet and a preference switch. The
- * stylesheet lives in src/*.css and is inlined by build.mjs — the module loader
- * has no filesystem access, so the built client.js is self-contained.
+ * Publishes the stylesheet, marks the host parts, and registers the skin's own
+ * chrome. The stylesheet lives in src/*.css, the host bridge in
+ * src/host/runtime.js, and build.mjs inlines both — the module loader has no
+ * filesystem access, so the built client.js is self-contained.
  */
 window.__ModuleLoader__.load({
   id: 'dsh-islands-ui',
@@ -11,35 +12,22 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const ReactDOM = require('react-dom');
     const h = React.createElement;
+    /*__HOST_RUNTIME__*/
     const CSS = '__ISLANDS_CSS__';
-    /**
-     * Structure-specific stylesheets keyed by dialect. The base sheet covers
-     * the flat sidebar; releases that change the shell get a variant that is
-     * inlined only for the build the client detected.
-     */
-    const CSS_VARIANTS = '__ISLANDS_CSS_VARIANTS__';
 
-    const ATTRIBUTE = 'data-islands-ui';
+    const ATTRIBUTE = SKIN_ATTR;
     const STORAGE_KEY = 'dsh-islands-ui:enabled';
     const WORKSPACE_ATTR = 'data-islands-workspace-collapsed';
     /** Escape hatch, session scoped so the next launch re-runs the check. */
     const FORCE_KEY = 'dsh-islands-ui:force';
     /**
-     * Layout anchors every Islands rule is written against. They do not exist
-     * when `apply()` runs (the shell mounts afterwards), so the gate waits for
-     * the frame and only then decides whether this build still matches.
+     * Contracts every Islands layout depends on. They do not exist when
+     * `apply()` runs (the shell mounts afterwards), so the gate waits for the
+     * root slot and only then decides whether this build still matches.
      */
-    const REQUIRED_ANCHORS = ['.PIRFFq_frame', '.PIRFFq_centerCol'];
-    const SIDEBAR_COLUMN = '.PIRFFq_sidebarCol';
-    const SIDEBAR_ROOT = '.kB3qhq_root';
-    /**
-     * Sidebar-shell dialects in release order. `since` is the first DSH release
-     * that ships the dialect; a build older than every row keeps the base
-     * stylesheet. Add a row (and a matching `src/variants/<dialect>.css`) when
-     * DSH restructures the shell again.
-     */
-    const SHELL_DIALECTS = [{ since: '0.2.2-rc.2', dialect: 'scroll' }];
-    const SHELL_FLAT = 'flat';
+    const CORE_CONTRACTS = [HOST.ROOT_SLOT, HOST.SIDEBAR_SLOT];
+    const CORE_PARTS = ['layout-frame', 'center-column', 'sidebar-root'];
+    const FRAME = partSelector('layout-frame');
     /** No shell content at all after this long: the build is unusable. */
     const COMPAT_TIMEOUT_MS = 6000;
     /** Content mounted but the frame anchor never showed up: rename, not slowness. */
@@ -48,11 +36,11 @@ window.__ModuleLoader__.load({
     let skinRegistrar = null;
     let publishRightbarWidth = null;
     let activated = false;
-    /** Release reported by the client boot, and the stylesheet it selects. */
+    /** Release reported by the client boot, and the structure observed on the page. */
     let shellVersion = null;
-    let shellDialect = SHELL_FLAT;
+    let shellStructure = 'unknown';
     let styleTag = null;
-    let compatState = { status: 'checking', missing: [], forced: false, version: null, dialect: SHELL_FLAT };
+    let compatState = { status: 'checking', missing: [], forced: false, version: null, structure: 'unknown' };
     const compatListeners = new Set();
 
     /** Copy for the preference row; the row is the only user-facing string. */
@@ -129,10 +117,10 @@ window.__ModuleLoader__.load({
         compatTitle: 'Islands UI 已自动关闭',
         compatBody: '当前 DSH 构建的界面结构与插件不匹配，皮肤已回退到默认外观，以免出现双栏重叠或控件遮挡。',
         compatView: '查看插件设置',
-        compatMissing: '缺失的界面锚点',
+        compatMissing: '缺失的界面契约',
         compatBannerTitle: '皮肤已自动停用：界面结构不匹配',
         compatBannerBody:
-          'Islands UI 的样式写在当前 DSH 构建的类名和结构上。升级后的 DSH 改掉了这些锚点，浮岛布局、原生导航隐藏和工作区折叠都会失效，因此插件没有启用皮肤，DSH 保持默认外观。',
+          'Islands UI 的样式依赖 DSH 公开的插槽、相位等契约，以及皮肤写回的部件标记。当前构建缺少核心契约，浮岛布局、原生导航隐藏和工作区折叠都会失效，因此插件没有启用皮肤，DSH 保持默认外观。',
         compatFix: '处理方式：把 Islands UI 更新到适配当前 DSH 的版本，或回退 DSH。若确认界面正常，可临时强制启用（下次启动会重新检测）。',
         compatForce: '仍然启用',
         compatForced: '已强制启用，本次会话跳过自动检测。',
@@ -217,10 +205,10 @@ window.__ModuleLoader__.load({
         compatBody:
           'This DSH build no longer matches the plugin, so the skin fell back to the default look instead of overlapping panels.',
         compatView: 'Open plugin settings',
-        compatMissing: 'Missing interface anchors',
+        compatMissing: 'Missing interface contracts',
         compatBannerTitle: 'Skin disabled: interface structure changed',
         compatBannerBody:
-          'Islands UI styles itself against the class names and structure of the DSH build it ships for. This build changed those anchors, so the island layout, the hidden native navigation and the workspace collapse would all break. The skin therefore stayed off and DSH keeps its default look.',
+          'Islands UI styles itself against the host contracts for slots and phases, plus the part marks the skin writes back. This build is missing the core contracts, so the island layout, the hidden native navigation and the workspace collapse would all break. The skin therefore stayed off and DSH keeps its default look.',
         compatFix:
           'Update Islands UI to a release that matches this DSH build, or roll DSH back. If the interface looks fine, you can enable it anyway for this session.',
         compatForce: 'Enable anyway',
@@ -362,99 +350,25 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function parseVersion(value) {
-      const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u.exec(String(value).trim());
-      if (match === null) return null;
-      return {
-        core: [Number(match[1]), Number(match[2]), Number(match[3])],
-        pre: match[4] === undefined ? [] : match[4].split('.'),
-      };
-    }
-
-    /** Semver precedence, including numeric pre-release identifiers. */
-    function compareVersions(left, right) {
-      const a = parseVersion(left);
-      const b = parseVersion(right);
-      if (a === null || b === null) return null;
-      for (let index = 0; index < 3; index += 1) {
-        if (a.core[index] === b.core[index]) continue;
-        return a.core[index] < b.core[index] ? -1 : 1;
-      }
-      if (a.pre.length === 0 || b.pre.length === 0) {
-        return a.pre.length === b.pre.length ? 0 : a.pre.length === 0 ? 1 : -1;
-      }
-      const length = Math.max(a.pre.length, b.pre.length);
-      for (let index = 0; index < length; index += 1) {
-        const x = a.pre[index];
-        const y = b.pre[index];
-        if (x === undefined) return -1;
-        if (y === undefined) return 1;
-        const xNumeric = /^\d+$/u.test(x);
-        const yNumeric = /^\d+$/u.test(y);
-        if (xNumeric && yNumeric) {
-          const diff = Number(x) - Number(y);
-          if (diff !== 0) return diff < 0 ? -1 : 1;
-        } else if (xNumeric !== yNumeric) {
-          // Numeric identifiers always sort before alphanumeric ones.
-          return xNumeric ? -1 : 1;
-        } else if (x !== y) {
-          return x < y ? -1 : 1;
-        }
-      }
-      return 0;
-    }
-
-    /** Dialect the reported release ships; null when the version is unreadable. */
-    function dialectForVersion(version) {
-      if (version === null || parseVersion(version) === null) return null;
-      let dialect = SHELL_FLAT;
-      for (const row of SHELL_DIALECTS) {
-        const order = compareVersions(version, row.since);
-        if (order !== null && order >= 0) dialect = row.dialect;
-      }
-      return dialect;
-    }
-
     /**
-     * Structure the mounted shell actually uses, read from the housekeeping
-     * classes rather than the version: `flat` is the pre-0.2.2-rc.2 sidebar,
-     * `scroll` the one wrapped in scroll containers, and `unknown` a shell no
-     * stylesheet was written against. Null means the shell has not mounted.
+     * Structure the mounted shell actually uses, read from the parts the walker
+     * wrote. This is display information only: the stylesheet never branches on
+     * a release number.
      */
-    function detectShellDialect() {
-      const root = document.querySelector(SIDEBAR_ROOT);
-      if (root === null) return null;
-      const scrollRegion = root.querySelector(':scope > .kB3qhq_scrollRegion');
-      if (scrollRegion !== null) {
-        return scrollRegion.querySelector(':scope > .kB3qhq_scrollArea') !== null ? 'scroll' : 'unknown';
-      }
-      return root.querySelector(':scope > .kB3qhq_regionArea') !== null ? SHELL_FLAT : 'unknown';
+    function detectStructure() {
+      if (document.querySelector(partSelector('sidebar-scroll-region')) !== null) return 'scroll';
+      if (document.querySelector(partSelector('region-area')) !== null) return 'flat';
+      return 'unknown';
     }
 
-    function stylesheetFor(dialect) {
-      const variant = CSS_VARIANTS[dialect];
-      if (typeof variant !== 'string' || variant === '') return CSS;
-      return `${CSS}\n\n/* ---- variant: ${dialect} ---- */\n${variant}`;
-    }
-
-    /** Swap the injected stylesheet when the detected structure changes. */
-    function applyStylesheet(dialect) {
-      shellDialect = dialect;
-      if (styleTag !== null) styleTag.textContent = stylesheetFor(dialect);
-    }
-
-    /** Which anchors of the running DSH build are gone. */
+    /** Which host contracts or core parts of the running build are gone. */
     function missingAnchors() {
-      const missing = REQUIRED_ANCHORS.filter((selector) => document.querySelector(selector) === null);
-      // A sidebar column without its root class means the sidebar was rebuilt
-      // under another name; the skin would render a second rail beside it.
-      if (document.querySelector(SIDEBAR_COLUMN) !== null && document.querySelector(SIDEBAR_ROOT) === null) {
-        missing.push(SIDEBAR_ROOT);
+      const missing = [];
+      for (const selector of CORE_CONTRACTS) {
+        if (document.querySelector(selector) === null) missing.push(selector);
       }
-      // A shell that matches no known dialect cannot be styled without the
-      // half-applied layout this gate exists to prevent.
-      if (detectShellDialect() === 'unknown') {
-        missing.push(shellDialect === 'scroll' ? '.kB3qhq_scrollRegion > .kB3qhq_scrollArea' : '.kB3qhq_regionArea');
+      for (const part of CORE_PARTS) {
+        if (document.querySelector(partSelector(part)) === null) missing.push(partSelector(part));
       }
       return missing;
     }
@@ -741,9 +655,9 @@ window.__ModuleLoader__.load({
       let attempts = 0;
       const tick = () => {
         attempts += 1;
-        const scope = document.querySelector('[role="dialog"]') ?? document;
+        const scope = document.querySelector(HOST.SETTINGS_DIALOG) ?? document;
         const cells = [
-          ...scope.querySelectorAll('button, a, [role="tab"], [role="option"], [class*="navCell"]'),
+          ...scope.querySelectorAll(`button, a, [role="tab"], [role="option"], ${partSelector('settings-nav-cell')}`),
         ];
         const target = cells.find((cell) => (cell.textContent ?? '').trim() === label);
         if (target instanceof HTMLElement) {
@@ -757,10 +671,21 @@ window.__ModuleLoader__.load({
 
     function openSettings(options) {
       const section = options?.section;
-      // The account launcher owns the Settings row; clicking that row is the
-      // reliable path on desktop (configurable shortcuts go through the native
-      // keyboard bridge, so a synthetic keydown never reaches them).
-      const trigger = document.querySelector('.kB3qhq_footArea button[aria-haspopup="menu"]');
+      // The dialog may already be open (the compatibility banner lives inside
+      // it); clicking the toggle again would close it.
+      if (document.querySelector(HOST.SETTINGS_DIALOG) !== null) {
+        revealSettingsSection(section);
+        return;
+      }
+      // The host exposes a direct settings trigger in the sidebar foot; the
+      // account menu path remains for builds that fold Settings into a menu.
+      const direct = document.querySelector(HOST.SETTINGS_TRIGGER);
+      if (direct instanceof HTMLElement) {
+        direct.click();
+        revealSettingsSection(section);
+        return;
+      }
+      const trigger = document.querySelector(`${partSelector('foot-area')} button[aria-haspopup="menu"]`);
       if (trigger instanceof HTMLElement) {
         trigger.click();
         window.setTimeout(() => {
@@ -817,13 +742,13 @@ window.__ModuleLoader__.load({
     }
 
     function revealPinnedSession(sessionId, title) {
-      const projectRows = () => [...document.querySelectorAll('.JoiKIa_projectRow')];
+      const projectRows = () => [...document.querySelectorAll(HOST.WORKSPACE_ROW)];
       const stateOf = (row) =>
         row.getAttribute('aria-expanded') ??
         row.querySelector('[aria-expanded]')?.getAttribute('aria-expanded');
       const expanded = (row) => stateOf(row) === 'true';
       const toggle = (row) => {
-        const chevron = row.querySelector('.JoiKIa_chevron');
+        const chevron = row.querySelector('[aria-expanded]');
         if (chevron instanceof HTMLElement) chevron.click();
         else row.click();
       };
@@ -834,7 +759,7 @@ window.__ModuleLoader__.load({
       }
 
       window.setTimeout(() => {
-        const candidates = [...document.querySelectorAll('.JoiKIa_sessionRow')].filter((row) =>
+        const candidates = [...document.querySelectorAll(HOST.SESSION_ROW)].filter((row) =>
           (row.textContent ?? '').includes(title),
         );
         if (candidates.length === 0) return;
@@ -1045,7 +970,7 @@ window.__ModuleLoader__.load({
         // The home button is the workspace drawer's opener in the narrow
         // layout; on desktop it returns to the conversation as before.
         if (id === null) {
-          const frame = document.querySelector('.PIRFFq_frame');
+          const frame = document.querySelector(FRAME);
           if (frame !== null && frame.hasAttribute('data-sidebar-drawer')) {
             layoutService?.toggleSidebar();
             return;
@@ -1884,7 +1809,7 @@ window.__ModuleLoader__.load({
     function useRightPanelOpen() {
       const [open, setOpen] = React.useState(false);
       React.useEffect(() => {
-        const read = () => setOpen(document.querySelector('.Dv5QdW_panel[data-sidebar-right-open]') !== null);
+        const read = () => setOpen(document.querySelector(HOST.RIGHT_PANEL_OPEN) !== null);
         read();
         const observer = new MutationObserver(read);
         // The pane can mount already open (restored layout), in which case no
@@ -1902,7 +1827,7 @@ window.__ModuleLoader__.load({
     }
 
     function rightPanelOpenNow() {
-      return document.querySelector('.Dv5QdW_panel[data-sidebar-right-open]') !== null;
+      return document.querySelector(HOST.RIGHT_PANEL_OPEN) !== null;
     }
 
     /**
@@ -1973,7 +1898,7 @@ window.__ModuleLoader__.load({
      * column is hidden, and the frame track shrinks to the rail width.
      */
     function toggleWorkspace() {
-      const frame = document.querySelector('.PIRFFq_frame');
+      const frame = document.querySelector(FRAME);
       if (frame !== null && frame.hasAttribute('data-sidebar-drawer')) {
         // Narrow layout: the workspace is a drawer, owned by DSH's native
         // narrow expansion state. The rail's home button and the shortcut both
@@ -2159,8 +2084,8 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         let current = null;
         const attach = () => {
-          const header = document.querySelector('.Kjh-qa_sectionHeader');
-          const tree = document.querySelector('.Kjh-qa_treeBody') ?? document.querySelector('.Kjh-qa_list');
+          const header = document.querySelector(partSelector('section-header'));
+          const tree = document.querySelector(partSelector('tree-body')) ?? document.querySelector(partSelector('list'));
           const target = header?.parentElement ?? tree?.parentElement;
           if (target === null || target === undefined) return;
           let anchor = target.querySelector(':scope > .isl-pinnedHost');
@@ -2277,7 +2202,7 @@ window.__ModuleLoader__.load({
      * Turn the skin on only when the build still matches the stylesheet.
      *
      * The plugin's own chrome is plain React and keeps rendering no matter what
-     * DSH does, while every layout rule is keyed to the shipped class names. A
+     * DSH does, while every layout rule is keyed to host contracts and skin parts. A
      * renamed anchor therefore yields a half-skinned, overlapping UI instead of
      * a clean fallback, so a mismatched build stays on the untouched default.
      */
@@ -2297,10 +2222,10 @@ window.__ModuleLoader__.load({
         if (settled) return;
         settled = true;
         stop();
-        setCompat({ status: 'missing', missing, forced: false, version: shellVersion, dialect: shellDialect });
-        console.warn('[islands-ui] interface anchors missing; the skin stayed off:', {
+        setCompat({ status: 'missing', missing, forced: false, version: shellVersion, structure: shellStructure });
+        console.warn('[islands-ui] host contracts missing; the skin stayed off:', {
           version: shellVersion,
-          dialect: shellDialect,
+          structure: shellStructure,
           missing,
         });
         // Someone who already switched the skin off does not need a popup; the
@@ -2312,25 +2237,14 @@ window.__ModuleLoader__.load({
         if (settled) return;
         settled = true;
         stop();
-        setCompat({ status: 'ok', missing: [], forced: false, version: shellVersion, dialect: shellDialect });
+        setCompat({ status: 'ok', missing: [], forced: false, version: shellVersion, structure: shellStructure });
         activate();
       };
 
       const settle = () => {
         frameHandle = null;
         if (settled) return;
-        // The version map picks the stylesheet, but the DOM is the authority on
-        // what is actually rendered: if they disagree, trust the structure and
-        // swap the variant before the skin turns on.
-        const structure = detectShellDialect();
-        if (structure !== null && structure !== 'unknown' && structure !== shellDialect) {
-          console.warn('[islands-ui] shell structure differs from the reported version; selecting the matching stylesheet', {
-            version: shellVersion,
-            expected: shellDialect,
-            actual: structure,
-          });
-          applyStylesheet(structure);
-        }
+        shellStructure = detectStructure();
         const missing = missingAnchors();
         if (missing.length === 0) {
           pass();
@@ -2348,7 +2262,7 @@ window.__ModuleLoader__.load({
       const watch = () => {
         frameHandle = null;
         if (settled) return;
-        if (document.querySelector(REQUIRED_ANCHORS[0]) !== null) {
+        if (document.querySelector(HOST.ROOT_SLOT) !== null) {
           settle();
           return;
         }
@@ -2393,9 +2307,8 @@ window.__ModuleLoader__.load({
       } catch {
         /* private mode: the choice still applies for this page. */
       }
-      const structure = detectShellDialect();
-      if (structure !== null && structure !== 'unknown') applyStylesheet(structure);
-      setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, dialect: shellDialect });
+      shellStructure = detectStructure();
+      setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, structure: shellStructure });
       activate();
     }
 
@@ -2502,7 +2415,7 @@ window.__ModuleLoader__.load({
           h(
             'code',
             { className: 'isl-settingsMetaValue' },
-            shellDialect === 'scroll' ? copy.compatStructureScroll : copy.compatStructureFlat,
+            shellStructure === 'scroll' ? copy.compatStructureScroll : copy.compatStructureFlat,
           ),
         ),
         h(CompatibilityBanner, { copy, compat, onForce: forceEnable }),
@@ -2607,18 +2520,15 @@ window.__ModuleLoader__.load({
         slotsService = ctx.slots;
         applyAccent(readAccent());
 
-        // Pick the stylesheet before the first paint: the base sheet plus the
-        // variant of the release the client booted with. The compatibility gate
-        // verifies the mounted structure and can still swap it before the skin
-        // turns on.
+        // The stylesheet is one sheet for every build. Structure differences
+        // are expressed by the parts the walker writes, not by a release map.
         shellVersion = readDshVersion();
-        shellDialect = dialectForVersion(shellVersion) ?? SHELL_FLAT;
 
         ctx.effect(() => {
           const tag = document.createElement('style');
           tag.dataset.plugin = 'dsh-islands-ui';
           tag.dataset.pluginCss = 'dsh-islands-ui/islands.css';
-          tag.textContent = stylesheetFor(shellDialect);
+          tag.textContent = CSS;
           styleTag = tag;
           document.head.appendChild(tag);
           return () => {
@@ -2627,6 +2537,10 @@ window.__ModuleLoader__.load({
             document.body?.removeAttribute(ATTRIBUTE);
           };
         }, 'dsh-islands-ui: stylesheet');
+
+        // Mark host nodes before the gate reads them. The walker is the only
+        // place that turns a host local class name into a skin part.
+        ctx.effect(() => installParts(), 'dsh-islands-ui: host parts');
 
         // Everything below turns the chrome on, so it runs only after the gate
         // has confirmed this build still matches the stylesheet.
@@ -2665,7 +2579,7 @@ window.__ModuleLoader__.load({
 
             const locate = () => {
               locateFrame = null;
-              const next = document.querySelector('.Dv5QdW_panel');
+              const next = document.querySelector(HOST.RIGHT_PANEL);
               watch(next);
               if (next === null) return;
               mountObserver?.disconnect();
@@ -2747,6 +2661,7 @@ window.__ModuleLoader__.load({
                   return scope.shortcuts.register({
                     id: 'islands.model.open',
                     label: () => 'Model picker',
+                    aliases: [],
                     defaults: {
                       'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
                       'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
@@ -2803,7 +2718,7 @@ window.__ModuleLoader__.load({
             let observer;
             let timer;
             const fix = () => {
-              const frame = document.querySelector('.PIRFFq_frame');
+              const frame = document.querySelector(FRAME);
               if (frame === null) return;
               if (frame.hasAttribute('data-sidebar-drawer')) {
                 document.body.removeAttribute(WORKSPACE_ATTR);
@@ -2816,7 +2731,7 @@ window.__ModuleLoader__.load({
               layoutService?.toggleSidebar();
             };
             const attach = () => {
-              const frame = document.querySelector('.PIRFFq_frame');
+              const frame = document.querySelector(FRAME);
               if (frame === null) {
                 timer = window.setTimeout(attach, 200);
                 return;
@@ -2849,9 +2764,8 @@ window.__ModuleLoader__.load({
         );
 
         if (isForced()) {
-          const structure = detectShellDialect();
-          if (structure !== null && structure !== 'unknown') applyStylesheet(structure);
-          setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, dialect: shellDialect });
+          shellStructure = detectStructure();
+          setCompat({ status: 'ok', missing: [], forced: true, version: shellVersion, structure: shellStructure });
           activate();
           return;
         }

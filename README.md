@@ -145,17 +145,22 @@ src/
   40-settings.css      设置弹窗、设置页外壳
   45-model-picker.css  模型/推理两级弹层
   50-components.css    偏好行、开关、强调色选择器等共享组件
+  60-peers.css         第三方插件适配（仅此文件允许 [class*=...]）
+  host/runtime.js      宿主契约、本地名提取、区域/部件表、遍历器
   client.template.js   浏览器端入口模板（React 组件 + 插槽注册）
-build.mjs              把 src/*.css 内联进 client.js
+build.mjs              把 src/*.css 与 host/runtime.js 内联进 client.js
 client.js              构建产物（自包含，运行时无法读文件）
+scripts/check-css.mjs  选择器门禁
+scripts/check-parts.mjs 部件表门禁
 scripts/check-package.mjs  发布前包内容校验
+test/                 本地名与表完整性测试
 skin.json              主题管理器清单
-docs/                  发布与商店收录说明
+docs/                  发布、商店收录与宿主契约说明
 ```
 
 ```bash
 npm run build        # 修改 src/*.css 或模板后重新生成 client.js
-npm run check        # 校验 client.js 是否为最新，并检查 npm 包是否可发布
+npm run check        # 校验 client.js、CSS/部件门禁、单元测试和 npm 包
 npm run pack:check   # npm pack --dry-run
 npm pack             # 生成 dsh-islands-ui-<version>.tgz
 ```
@@ -195,12 +200,12 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 ## 兼容性与边界
 
 - 皮肤是**纯客户端样式层**，不替换会话、设置或插件的数据与交互；左侧栏图标排序与显隐、置顶聚合、定位等额外能力也只在客户端完成。
-- 选择器依赖 Harness 当前构建的 CSS Module 哈希类名（如 `PIRFFq_*`、`kB3qhq_*`、`JoiKIa_*`、`_77Pn0W_*`）与少量 `data-*` 挂点；**Harness 升级或重新构建后类名可能变化，需要同步更新对应 CSS**。
-- 启动时检测界面骨架锚点（`.PIRFFq_frame`、`.PIRFFq_centerCol`、`.kB3qhq_root`）并校验侧栏结构方言：先按 DSH 版本注入对应样式，再用挂载后的 DOM 交叉验证（`flat` / `scroll`），两者不一致时以 DOM 为准切换样式；结构无法识别时才**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。
-- 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构，便于排查升级后的样式问题。
+- 样式只依赖两层稳定信息：Harness 公开的契约（`data-slot`、`data-phase`、`data-conversation-scroll`、`data-composer-card`、`data-row-key`、`role` / `aria-*`），以及皮肤写回的部件标记 `data-islands-part`。宿主类名只在 `src/host/runtime.js` 的部件表里以本地名出现，哈希段不进入任何选择器；Harness 重新构建改变哈希时无需更新，宿主改本地名时对应规则安静失效，改表一行即可恢复。
+- 启动时只校验核心契约（`[data-slot="root"]`、`[data-slot="sidebar"]`）和核心部件（frame、center column、sidebar root）；核心契约缺失时才**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。单个装饰部件缺失只让对应规则失效，不会关掉整个皮肤。
+- 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构（`flat` / `scroll`，由部件是否存在推断），便于排查升级后的样式问题。
 - 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
 - Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
-- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的结构差异由客户端按版本选择的样式变体处理，变体未覆盖的新结构会触发上述自检降级。`skin.json` 为主题管理器提供 id、强调色和挂载行。
+- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的结构差异由同一张样式表按部件是否存在处理，不再按版本注入方言。`skin.json` 为主题管理器提供 id、强调色和挂载行。
 
 ---
 
@@ -224,7 +229,7 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 
 **为什么某些界面还是旧样式？**
 
-说明皮肤**检测到界面结构不匹配，已自动关闭**。DSH 升级可能改掉皮肤依赖的 CSS Module 哈希类名，半启用会变成双栏重叠，所以插件宁可保持默认外观：右下角会有提示，设置 → Islands UI 顶部有黄色说明条并列出缺失的锚点。把 Islands UI 更新到适配当前 DSH 的版本即可恢复；确认界面正常也可以点「仍然启用」临时开启（下次启动重新检测）。
+说明皮肤**检测到核心宿主契约缺失，已自动关闭**。DSH 升级可能改掉 `data-slot`、`data-phase` 等公开契约；半启用会变成双栏重叠，所以插件宁可保持默认外观：右下角会有提示，设置 → Islands UI 顶部有黄色说明条并列出缺失的契约。把 Islands UI 更新到适配当前 DSH 的版本即可恢复；确认界面正常也可以点「仍然启用」临时开启（下次启动重新检测）。
 
 **Windows / Linux 能用吗？**
 
