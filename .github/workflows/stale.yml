@@ -1,0 +1,44 @@
+# Close issues that have had no activity for 7 days.
+#
+# actions/stale runs on a schedule, so GitHub provides the runner and the
+# GITHUB_TOKEN; no server or secret is needed.
+#
+# Want a warning period instead of closing immediately? Set
+# days-before-issue-close to 7: the issue gets the `stale` label now and is
+# closed 7 days later if nothing changes.
+#
+# Want to close only issues that are waiting on the reporter? Uncomment:
+#   only-issue-labels: needs-info
+name: Close inactive issues
+
+on:
+  schedule:
+    - cron: '30 1 * * *' # UTC 01:30 = 09:30 Asia/Shanghai
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: stale-issues
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/stale@v11
+        with:
+          days-before-issue-stale: 7
+          days-before-issue-close: 0
+          # Do not touch pull requests.
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: 'stale'
+          exempt-issue-labels: 'pinned,security,good first issue,help wanted'
+          skip-stale-issue-message: true
+          close-issue-message: |
+            此 issue 已 7 天无活动，自动关闭。如仍需要，请重新打开并补充信息。
+          operations-per-run: 100

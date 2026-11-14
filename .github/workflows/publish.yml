@@ -1,11 +1,11 @@
-# Publish dsh-islands-ui to npm.
+# Publish dsh-islands-ui to npm via npm Trusted Publishing (OIDC).
 #
-# Requires an `NPM_TOKEN` repository secret with publish access to the
-# dsh-islands-ui package. Prefer npm Trusted Publishing once the package
-# exists; this workflow keeps the token path working for the first release.
+# No long-lived NPM_TOKEN is stored: the publish step exchanges this
+# workflow's OIDC token for a short-lived npm credential, and --provenance
+# signs the tarball with the same identity.
 #
 # Trigger:
-#   - push a tag like v1.0.0 (must match package.json version)
+#   - push a tag like v1.1.2 (must match package.json version)
 #   - or run the workflow manually once the version is ready
 name: Publish
 
