@@ -5,10 +5,11 @@
   <p>Rounded islands · persistent rail · pinned-session shelf · adjustable accent</p>
   <p>
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="npm" src="https://img.shields.io/npm/v/dsh-islands-ui?style=flat-square" /></a>
+    <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="downloads" src="https://img.shields.io/npm/dm/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
-    <a href="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml/badge.svg" /></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/dsh-islands-ui?style=flat-square" /></a>
-    <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-4f7cff?style=flat-square" />
+    <img alt="DSH 0.2.2-rc.1–rc.3" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.1%E2%80%93rc.3-4f7cff?style=flat-square" />
+    <img alt="Platform: macOS, Windows, Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-4f7cff?style=flat-square" />
   </p>
 </div>
 
@@ -32,13 +33,25 @@ dsh plugin --profile web add dsh-islands-ui
 
 Then refresh (`⌘R` / `Ctrl+R`). The skin is enabled by default. Turn it off at **Settings → Islands UI** to restore the stock appearance immediately; your preference and accent are kept.
 
-> Requires DeepSeek Harness `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3`. The stylesheet adapts to the sidebar structure by the host parts that are present, not by switching sheets per release; the running release is only shown in Settings and used by the compatibility gate. Older `0.2.x` builds fall back to the base stylesheet. The package declares `dsh.bundle` + `dsh.client`, so `dsh plugin add` installs and mounts it without editing the profile by hand.
+> Supports DeepSeek Harness `0.2.2-rc.1`, `0.2.2-rc.2` and `0.2.2-rc.3`; older versions do not load. If a DSH upgrade changes the interface structure, the skin may disable itself with a notice — update the plugin and refresh.
+
+Offline or manual install from a local package:
+
+```bash
+dsh plugin --profile desktop add ./dsh-islands-ui-<version>.tgz
+```
+
+### Update
+
+Run the install command again, or update from the plugin store, then refresh. If the CLI reports that the plugin is already installed, remove it first and add it again.
 
 ### Uninstall
 
 ```bash
 dsh plugin --profile desktop remove dsh-islands-ui
 ```
+
+Refresh after uninstalling. Your skin preferences stay on this machine and are reused if you reinstall.
 
 ---
 
@@ -50,11 +63,11 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | 🧭 | **Persistent rail** | Workspace plus every plugin launcher, shown inline; the home button is a pure conversation / workspace-drawer trigger with no selected state (subtle hover and a translucent click ripple); click a panel to open it, drag to reorder with a floating preview, right-click to show or hide |
 | ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color and follow-theme |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
-| 🌙 | **Dark mode** | Full dark token set: near-black canvas, dark islands, translucent interaction layers |
+| 🌙 | **Dark mode** | Full dark palette: near-black canvas, dark islands, translucent interaction layers |
 | 🔄 | **Desktop update entry** | Pinned above the settings gear; distinct states for available, downloading, verifying, installing and failure, with accent-colored 3×3 dot-matrix loaders |
 | ⌨️ | **Shortcuts** | `⌘B`, `⌥⌘B`, `⌘,`, `⌘⇧M`; buttons show the current binding on hover |
 
-The skin is a client-only style layer. Pinning helpers, the pinned shelf and the settings page are also implemented in the browser bundle; no host tool, service or session data is added.
+Everything happens in the interface layer. Rail ordering, the pinned shelf and the settings page do not modify your Harness sessions, settings or plugin data.
 
 ---
 
@@ -75,12 +88,12 @@ The skin is a client-only style layer. Pinning helpers, the pinned shelf and the
 | Platform | Status |
 | --- | --- |
 | macOS | ✅ Tested |
-| Windows | 🟡 Native title-bar layout (no island top bar), rail, right-hand native header tools, settings gear and model picker adapted; **not tested on a physical Windows machine** |
-| Linux | 🟡 Uses the same top bar and rail; **not tested** |
+| Windows | ✅ Tested (native title bar layout) |
+| Linux | 🟡 Native window decorations, not tested |
 
-On Windows the island top bar is not rendered and the islands sit directly below the native title bar. The workspace collapse uses DSH's own sidebar button in the caption row's top-left corner, while the right-panel toggle, bottom-panel entry and session tools stay in DSH's native conversation header — position, look and hover are the host's. The rail, settings gear and shortcuts stay enabled. Linux follows native window decorations, which vary by desktop environment.
+Windows uses DSH's native title bar instead of the plugin's 40px top bar; the workspace collapses from the native sidebar button in the top-left corner, while the right-panel toggle and conversation tools stay in DSH's native conversation header. macOS and Linux use the 40px top bar; Linux window decorations vary by desktop environment.
 
-If you hit a title-bar, drag-region, window-button or layout issue, please open an [issue](https://github.com/DawnCHL/dsh-islands-ui/issues) with your OS version, window size and a screenshot.
+When reporting an issue, please include your OS, DSH version, window size and a screenshot.
 
 ---
 
@@ -104,93 +117,21 @@ If you hit a title-bar, drag-region, window-button or layout issue, please open 
 
 ---
 
-## State
+## Data and privacy
 
-Stored in `localStorage`; clear these keys to reset:
+The skin only redraws the interface. It does not modify or upload your sessions, settings or plugin data.
 
-| Key | Purpose |
-| --- | --- |
-| `dsh-islands-ui:enabled` | `1` / `0`, master switch |
-| `dsh-islands-ui:accent` | Custom accent color; absent means follow theme |
-| `dsh-islands-ui:pinned-collapsed` | Whether the pinned group is collapsed |
-| `dsh-islands-ui:rail` | Left-rail icon order and hidden entries |
-
----
-
-## Development
-
-```text
-src/
-  00-tokens.css        design tokens + --dsw-* aliases (single source of truth)
-  10-shell.css         three-column shell → canvas + islands
-  15-topbar.css        window top bar
-  16-rail.css          left icon rail, drag reorder, show/hide menu, settings gear
-  17-update.css        desktop update entry, state styles, 3×3 dot-matrix loaders
-  20-sidebar.css       workspace island, pinned shelf, session row states
-  30-conversation.css  conversation page, composer, top tool group
-  40-settings.css      settings dialog and section shell
-  45-model-picker.css  model / reasoning popover
-  50-components.css    preference rows, switches, accent picker
-  60-peers.css         third-party plugin adapters ([class*=...] is allowed only here)
-  host/runtime.js      host contracts, local-name extraction, part table, walker
-  client.template.js   browser entry (React components + slot registrations)
-build.mjs              inline src/*.css and host/runtime.js into client.js
-client.js              built, self-contained artifact
-scripts/check-css.mjs  selector gate
-scripts/check-parts.mjs  part-table gate
-scripts/check-package.mjs  pre-publish packaging checks
-test/                  local-name and table-integrity tests
-skin.json              theme-manager manifest
-```
-
-```bash
-npm run build        # regenerate client.js after editing CSS or the template
-npm run check        # verify the build is current and the package is publishable
-npm run pack:check   # npm pack --dry-run
-npm pack             # produce dsh-islands-ui-<version>.tgz
-```
-
-The module loader cannot read package files at runtime, so `client.js` must contain the full stylesheet. Always commit the rebuilt artifact.
-
-### Package layout
-
-| Path | Purpose |
-| --- | --- |
-| `index.js` | Host half; the skin has no host behavior, so this only keeps the bundle a valid profile row |
-| `client.js` | Browser half: stylesheet injection, rail, pinned shelf, settings page and model picker |
-| `cordis.patch.yml` | One `insert` row named `dsh-islands-ui` |
-| `skin.json` | id, display name, accent, body attribute and wiring row for theme managers |
-| `screenshots.json` | 1–8 repository-relative screenshots read by storefronts |
-| `assets/` | Store icon and README screenshots |
-
-### Repository configuration
-
-| File | Purpose |
-| --- | --- |
-| `.github/workflows/ci.yml` | Runs `npm run check` and `npm pack --dry-run` on PRs / main across Node 20, 22 and 24 |
-| `.github/workflows/publish.yml` | Publishes on a `v*` tag or manual dispatch; the tag must match `package.json`, and `NPM_TOKEN` is required |
-| `.github/ISSUE_TEMPLATE/` | Bug and feature forms that require the DSH version, platform and reproduction steps |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Build, wide/narrow layout, dark mode and local-path checks |
-| `.github/dependabot.yml` | Weekly GitHub Actions version updates |
-| `.editorconfig` / `.gitattributes` | UTF-8, LF, 2-space indentation; images and tarballs are binary |
-| `.nvmrc` | Node 24 for local development |
-| `CONTRIBUTING.md` | Development, build, commit conventions and PR checklist |
-| `SECURITY.md` | Supported versions and the private vulnerability-reporting flow |
-| `scripts/check-package.mjs` | Pre-publish validation of the manifest, row name, client build, screenshots and `files[]` |
-
-Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs and resolved conversations, with force pushes disabled; `v*` tags cannot be deleted or moved; fork PRs from external contributors need maintainer approval.
+The master switch, accent, pinned-group state and rail order are stored in your browser's local storage. Turning the skin off keeps these preferences; to reset them, restore the defaults in Settings or clear the site's local storage.
 
 ---
 
 ## Compatibility
 
-- The skin is a pure client style layer and does not replace session, settings or plugin data or behavior.
-- Styles depend on two stable layers only: host contracts (`data-slot`, `data-phase`, `data-conversation-scroll`, `data-composer-card`, `data-row-key`, `role` / `aria-*`) and the skin's own part marks in `data-islands-part`. Host class names appear only as local names in the tables in `src/host/runtime.js`; a hash segment never enters a selector. A Harness rebuild that changes hashes needs no update, and a host rename makes the affected rule go quiet until one table line changes.
-- On startup the plugin verifies the core contracts (`[data-slot="root"]`, `[data-slot="sidebar"]`) and the core parts (frame, center column, sidebar root). Only a missing core contract leaves the skin **off**; DSH keeps its default look, a toast explains why (5s auto-dismiss, manual close, click to open the plugin settings) and Settings → Islands UI carries a persistent amber notice plus a session-scoped "Enable anyway". A missing decorative part only silences its own rules.
-- Settings → Islands UI shows the detected DSH release and sidebar structure (`flat` / `scroll`, inferred from the parts present) for support triage.
-- Dark mode follows `data-ds-dark-theme`; the accent remaps `--dsw-alias-state-business-primary`, so it affects both the skin and native buttons.
-- Windows uses `data-windows-titlebar` and `--dsh-windows-titlebar-height` and renders no island top bar; Linux currently follows native window decorations.
-- `dsh.engines.dsh` / `engines.dsh` pin the tested line to `>=0.2.2-rc.1 <0.3.0-0`; outside that range the plugin manager refuses to install or upgrade. Structure drift inside the line is handled by one stylesheet keyed on the parts present, no longer by a version-selected variant. `skin.json` gives theme managers the id, accent and mount row.
+- Supports DSH `0.2.2-rc.1`, `0.2.2-rc.2` and `0.2.2-rc.3`; older versions do not load.
+- If a DSH upgrade changes key interface structure, the skin disables itself with a notice. Update Islands UI and refresh to recover; you can temporarily re-enable it from **Settings → Islands UI** while the interface looks correct.
+- Dark mode follows DSH; the accent applies to both the skin and native buttons.
+- Do not enable multiple themes or skins at once: they change the same palette and layout rules, so the last one loaded wins.
+- Windows uses the native title bar; Linux uses native window decorations, which vary by desktop environment.
 
 ---
 
@@ -198,40 +139,39 @@ Repository settings: `main` requires a PR, the `check (Node 20/22/24)` CI jobs a
 
 **Nothing changed after install.**
 
-Check that the plugin is enabled in the current profile and refresh (`⌘R` / `Ctrl+R`). For a local checkout, make sure `client.js` was rebuilt; for npm, compare `npm view dsh-islands-ui version` with the installed version. DSH versions below `0.2.2-rc.1` are not supported.
+Check that the plugin is enabled in the current DSH profile and refresh (`⌘R` / `Ctrl+R`). If your DSH is older than `0.2.2-rc.1`, upgrade DSH first; you can also check the skin status in **Settings → Islands UI**.
 
 **Does it touch my sessions or settings?**
 
-No. The skin injects CSS and registers browser-side slots only. Rail pins, the pinned shelf, locate state and accent live in `localStorage`; no session or profile data is written.
+No. The skin only redraws the interface; the master switch, accent, pinned-group state and rail order live in your browser's local storage.
 
 **How do I fully reset the skin?**
 
-Turn off **Settings → Islands UI**. To clear the saved preferences too, delete the `dsh-islands-ui:*` localStorage keys (see [State](#state)).
+Turn it off in **Settings → Islands UI** to restore the stock appearance immediately. To reset the saved preferences too, clear the site's local storage.
 
 **Can I run it with another theme?**
 
-Not recommended. Two skins write the same `--dsw-*` tokens and layout rules, so the last one loaded wins. dsh-market's Themes tab enforces one active theme; if you installed several manually, keep one.
+Not recommended. Multiple skins change the same palette and layout rules, so the last one loaded wins.
 
 **Why do some surfaces keep the old look?**
 
-A DSH upgrade can change a host local name or a contract. The affected rule goes quiet instead of matching a neighbour; update Islands UI, or open an issue with a screenshot and DSH version.
+A DSH upgrade may change the interface structure. If the skin detects a key mismatch, it disables itself to avoid overlapping layouts. Update Islands UI to a version that supports your DSH and refresh; if the interface looks correct, you can also click "Enable anyway" in Settings for the current session (it re-checks on the next launch).
 
 **Windows / Linux?**
 
-The native title bar (no island top bar on Windows), rail, right-hand native header tools, right-panel toggle and title-bar height are adapted, but neither platform has been tested on a physical machine. Please report title-bar, drag-region or window-button issues using the issue template.
-
-**Will it be in plugin stores?**
-
-DSHHub discovers npm packages automatically. dsh-market's Themes tab reads the awesome-dsh-plugin catalog; submit the `theme` entry once the repository meets the listing requirements. See [docs/publishing.md](docs/publishing.md).
+Windows is tested with the native title bar layout. Linux follows native window decorations and has not been tested yet. Please report title-bar, drag-region or window-button issues with your system details.
 
 ---
 
-## Contributing and security
+## Feedback
 
-- Development, build, commit conventions and PR checklist: [CONTRIBUTING.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/CONTRIBUTING.md)
-- Bugs / compatibility: [Issues](https://github.com/DawnCHL/dsh-islands-ui/issues)
-- Improvements: PRs welcome
-- Windows / Linux test reports especially welcome (screenshot + OS version + window size)
-- Security issues: do not open a public issue; follow [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md)
+- Bugs or compatibility issues: [open an issue](https://github.com/DawnCHL/dsh-islands-ui/issues)
+- Include your OS, DSH version, window size and a screenshot.
+- Feature requests are welcome in Issues too.
+- Security issues: do not open a public issue; report privately following [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © DawnCHL
 
 <p align="center"><sub>Made for DeepSeek Harness · Islands UI</sub></p>

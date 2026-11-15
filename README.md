@@ -7,11 +7,9 @@
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="npm" src="https://img.shields.io/npm/v/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://www.npmjs.com/package/dsh-islands-ui"><img alt="downloads" src="https://img.shields.io/npm/dm/dsh-islands-ui?style=flat-square" /></a>
     <a href="https://github.com/DawnCHL/dsh-islands-ui"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-DawnCHL%2Fdsh--islands--ui-3b3b3b?style=flat-square" /></a>
-    <a href="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DawnCHL/dsh-islands-ui/actions/workflows/ci.yml/badge.svg" /></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/dsh-islands-ui?style=flat-square" /></a>
-    <img alt="DSH" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.2-4f7cff?style=flat-square" />
-    <img alt="Platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-3b3b3b?style=flat-square" />
-    <img alt="Windows/Linux" src="https://img.shields.io/badge/Windows%2FLinux-untested-orange?style=flat-square" />
+    <img alt="DSH 0.2.2-rc.1–rc.3" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.2--rc.1%E2%80%93rc.3-4f7cff?style=flat-square" />
+    <img alt="Platform: macOS, Windows, Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-3b3b3b?style=flat-square" />
   </p>
 </div>
 
@@ -35,13 +33,25 @@ dsh plugin --profile web add dsh-islands-ui
 
 安装后刷新页面（`⌘R` / `Ctrl+R`）。皮肤默认开启；可在 **设置 → Islands UI** 关闭，关闭后立即恢复 Harness 默认外观，偏好和强调色会保留。
 
-> 适用于 DSH `0.2.2-rc.1`、`0.2.2-rc.2` 与 `0.2.2-rc.3`。样式按宿主部件是否存在适配侧栏结构，不再按版本切换样式表；运行中的版本只用于设置页展示与兼容门禁。更早的 `0.2.x` 构建回退到基础样式。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
+> 支持 DSH `0.2.2-rc.1`、`0.2.2-rc.2` 与 `0.2.2-rc.3`；更低版本不会加载。DSH 升级后如果界面结构发生变化，皮肤可能自动停用并提示，更新插件后刷新即可恢复。
+
+离线或手动安装本地包：
+
+```bash
+dsh plugin --profile desktop add ./dsh-islands-ui-<version>.tgz
+```
+
+### 更新
+
+重新执行安装命令，或从插件商店更新，然后刷新页面。如果提示已安装，可先卸载再安装。
 
 ### 卸载
 
 ```bash
 dsh plugin --profile desktop remove dsh-islands-ui
 ```
+
+卸载后刷新页面；皮肤偏好仍保存在本机，重新安装会沿用。
 
 ---
 
@@ -73,11 +83,11 @@ dsh plugin --profile desktop remove dsh-islands-ui
 | 🧭 | **常驻左侧栏** | 工作区与全部插件图标直接排列；首页按钮只作会话 / 工作区抽屉触发器、不占选中态（hover 浅色反馈、点击半透明涟漪）；面板图标点击切换，按住拖动排序（浮动预览跟随鼠标），右键显示 / 隐藏图标 |
 | ⚙️ | **独立设置页** | 设置 → Islands UI：一键开关皮肤、强调色（预设 + 自定义 + 跟随主题） |
 | 📌 | **置顶聚合** | 置顶会话同时保留在原工作区，并聚合到「新会话」与「工作区」标题之间；分类可折叠 |
-| 🌙 | **深色模式** | 完整深色 token：近黑画布、深灰岛屿、白色透明交互层与深色阴影 |
+| 🌙 | **深色模式** | 完整深色配色：近黑画布、深灰岛屿、白色透明交互层与深色阴影 |
 | 🔄 | **桌面更新入口** | 设置齿轮上方常驻；发现新版本、下载、校验、安装与失败各有独立状态，加载态使用强调色 3×3 点阵动效 |
 | ⌨️ | **快捷键** | `⌘B` 折叠工作区、`⌥⌘B` 右侧栏、`⌘,` 设置、`⌘⇧M` 模型弹层；按钮悬停显示当前键位 |
 
-皮肤是纯客户端样式层；左侧栏图标排序与显隐、置顶聚合、定位与设置页也都在浏览器端完成，不新增 host 工具、服务或会话数据。
+所有改动都在界面层完成；左侧栏图标排序与显隐、置顶聚合、定位和设置页不会修改 Harness 的会话、设置或插件数据。
 
 ### 设计语言
 
@@ -109,103 +119,31 @@ dsh plugin --profile desktop remove dsh-islands-ui
 
 | 平台 | 状态 |
 | --- | --- |
-| macOS | ✅ 已实测（开发与日常使用环境） |
-| Windows | 🟡 已适配原生标题栏布局（不渲染插件顶栏）、左侧栏、设置齿轮、右侧工具原生位置、置顶聚合与模型弹层；**尚未在真实 Windows 电脑上实测** |
-| Linux | 🟡 使用同一套顶栏与左侧栏；**尚未实测** |
+| macOS | ✅ 已实测 |
+| Windows | ✅ 已实测（原生标题栏布局） |
+| Linux | 🟡 按原生窗口装饰适配，尚未实测 |
 
-Windows 下不渲染插件顶栏，岛屿直接接在原生标题栏下方；工作区折叠使用标题栏左上角的 DSH 原生侧栏按钮，右侧栏开关、底部面板入口与会话工具留在 DSH 原生的会话头位置（位置、外观与悬停都交给宿主）。左侧栏、设置齿轮和快捷键均已启用。Linux 按原生窗口装饰处理，不同桌面环境可能有差异。
+Windows 使用 DSH 原生标题栏，不渲染插件的 40px 顶栏；工作区折叠由标题栏左上角的原生侧栏按钮控制，右侧栏开关与会话工具留在 DSH 原生会话头位置。macOS / Linux 使用同一套 40px 顶栏；Linux 的窗口装饰因桌面环境而异。
 
-> **反馈**：如果你在 Windows 或 Linux 上遇到标题栏高度、拖拽区域、窗口按钮重叠、布局错位或快捷键问题，欢迎提交 [Issue](https://github.com/DawnCHL/dsh-islands-ui/issues) 或 PR，附系统版本、窗口尺寸和截图即可。
-
----
-
-## 状态存储
-
-| `localStorage` key | 作用 |
-| --- | --- |
-| `dsh-islands-ui:enabled` | `1` / `0`，总开关 |
-| `dsh-islands-ui:accent` | 自定义强调色（不存在表示跟随主题） |
-| `dsh-islands-ui:pinned-collapsed` | 置顶分类是否折叠 |
-| `dsh-islands-ui:rail` | 左侧栏图标的顺序与隐藏列表 |
-
-清除这些 key 即可恢复默认。
+> 反馈时请附上系统版本、DSH 版本、窗口尺寸和截图，方便定位问题。
 
 ---
 
-## 开发
+## 数据与隐私
 
-```text
-src/
-  00-tokens.css        设计变量 + 重定向 Harness 的 --dsw-* 别名（唯一真源）
-  10-shell.css         三栏框架 → 画布 + 岛屿
-  15-topbar.css        窗口顶部栏
-  16-rail.css          左侧图标栏、拖动排序、显隐菜单、设置齿轮
-  20-sidebar.css       工作区岛屿、置顶聚合、会话行状态
-  30-conversation.css  会话页、输入框、顶部工具组
-  40-settings.css      设置弹窗、设置页外壳
-  45-model-picker.css  模型/推理两级弹层
-  50-components.css    偏好行、开关、强调色选择器等共享组件
-  60-peers.css         第三方插件适配（仅此文件允许 [class*=...]）
-  host/runtime.js      宿主契约、本地名提取、区域/部件表、遍历器
-  client.template.js   浏览器端入口模板（React 组件 + 插槽注册）
-build.mjs              把 src/*.css 与 host/runtime.js 内联进 client.js
-client.js              构建产物（自包含，运行时无法读文件）
-scripts/check-css.mjs  选择器门禁
-scripts/check-parts.mjs 部件表门禁
-scripts/check-package.mjs  发布前包内容校验
-test/                 本地名与表完整性测试
-skin.json              主题管理器清单
-docs/                  发布、商店收录与宿主契约说明
-```
+皮肤只重绘界面，不会修改或上传你的会话、设置或插件数据。
 
-```bash
-npm run build        # 修改 src/*.css 或模板后重新生成 client.js
-npm run check        # 校验 client.js、CSS/部件门禁、单元测试和 npm 包
-npm run pack:check   # npm pack --dry-run
-npm pack             # 生成 dsh-islands-ui-<version>.tgz
-```
-
-开发时直接在 Harness 中刷新（`⌘R`）即可；`client.js` 是自包含的浏览器模块，样式在加载时注入。模块加载器运行时无法读取包内文件，因此修改 CSS 后必须重新构建并提交 `client.js`。
-
-### 包内容
-
-| 路径 | 作用 |
-| --- | --- |
-| `index.js` | host 半边；皮肤没有 host 行为，仅用于保持合法的 profile row |
-| `client.js` | 浏览器半边：样式注入、左侧栏、置顶聚合、设置页与模型弹层 |
-| `cordis.patch.yml` | 一条 `insert`，row name 为 `dsh-islands-ui` |
-| `skin.json` | 给主题管理器的 id、名称、强调色、body 属性与挂载行 |
-| `screenshots.json` | 商店读取的 1–8 张仓库相对路径截图 |
-| `assets/` | 商店图标与 README 截图 |
-
-### 仓库配置
-
-| 文件 | 作用 |
-| --- | --- |
-| `.github/workflows/ci.yml` | PR / main 上跑 `npm run check` 和 `npm pack --dry-run`，Node 20 / 22 / 24 矩阵 |
-| `.github/workflows/publish.yml` | 推送 `v*` tag 或手动触发发布；tag 必须与 `package.json` 版本一致，使用 `NPM_TOKEN` secret |
-| `.github/ISSUE_TEMPLATE/` | Bug / Feature 表单，强制填写 DSH 版本、平台和复现步骤 |
-| `.github/PULL_REQUEST_TEMPLATE.md` | PR 自检：构建、宽窄屏、深色模式、无本地路径 |
-| `.github/dependabot.yml` | 每周检查 GitHub Actions 版本更新 |
-| `.editorconfig` / `.gitattributes` | 统一 UTF-8、LF、2 空格；图片和 tarball 按二进制处理 |
-| `.nvmrc` | 本地开发使用 Node 24 |
-| `CONTRIBUTING.md` | 开发、构建、提交约定和 PR 清单 |
-| `SECURITY.md` | 支持版本与私密漏洞报告流程 |
-| `scripts/check-package.mjs` | 包里 manifest、row name、client 构建、截图和 `files[]` 的发布前校验 |
-
-仓库设置：`main` 需要 PR、CI 的 `check (Node 20/22/24)` 通过和对话解决后才能合并，且禁止 force push；`v*` tag 禁止删除/移动；外部 fork PR 需要维护者批准。
+总开关、强调色、置顶折叠和左侧栏顺序保存在本机浏览器存储中；关闭皮肤不会删除这些偏好。需要重置时，可在设置中改回默认，或清除该站点的本地存储。
 
 ---
 
-## 兼容性与边界
+## 兼容性
 
-- 皮肤是**纯客户端样式层**，不替换会话、设置或插件的数据与交互；左侧栏图标排序与显隐、置顶聚合、定位等额外能力也只在客户端完成。
-- 样式只依赖两层稳定信息：Harness 公开的契约（`data-slot`、`data-phase`、`data-conversation-scroll`、`data-composer-card`、`data-row-key`、`role` / `aria-*`），以及皮肤写回的部件标记 `data-islands-part`。宿主类名只在 `src/host/runtime.js` 的部件表里以本地名出现，哈希段不进入任何选择器；Harness 重新构建改变哈希时无需更新，宿主改本地名时对应规则安静失效，改表一行即可恢复。
-- 启动时只校验核心契约（`[data-slot="root"]`、`[data-slot="sidebar"]`）和核心部件（frame、center column、sidebar root）；核心契约缺失时才**不启用皮肤**，DSH 保持默认外观，右下角弹出说明（5 秒自动关闭、可手动关闭、点击进入插件设置），设置 → Islands UI 里也常驻一条黄色说明，并提供会话级的「仍然启用」。单个装饰部件缺失只让对应规则失效，不会关掉整个皮肤。
-- 设置 → Islands UI 显示检测到的 DSH 版本与侧栏结构（`flat` / `scroll`，由部件是否存在推断），便于排查升级后的样式问题。
-- 深色模式跟随 Harness 的 `data-ds-dark-theme`；强调色通过重映射 `--dsw-alias-state-business-primary` 生效，会同时影响皮肤和原生按钮。
-- Windows 使用 `data-windows-titlebar` 与 `--dsh-windows-titlebar-height` 适配原生标题栏，并且不渲染插件顶栏；Linux 暂无专用标题栏变量，按原生窗口装饰处理。
-- `dsh.engines.dsh` / `engines.dsh` 把兼容线钉在 `>=0.2.2-rc.1 <0.3.0-0`，越界时插件管理器会拒绝安装或升级；同一兼容线内部的结构差异由同一张样式表按部件是否存在处理，不再按版本注入方言。`skin.json` 为主题管理器提供 id、强调色和挂载行。
+- 支持 DSH `0.2.2-rc.1`、`0.2.2-rc.2` 与 `0.2.2-rc.3`；更低版本不会加载。
+- 如果 DSH 升级改变了关键界面结构，皮肤会自动停用并提示；更新 Islands UI 后刷新页面即可恢复。确认界面正常时，可在 **设置 → Islands UI** 临时重新启用。
+- 深色模式跟随 DSH；强调色会同时作用于皮肤和原生按钮。
+- 不建议同时启用多个主题/皮肤：它们会修改同一批界面配色和布局规则，后加载的会覆盖先加载的。
+- Windows 使用原生标题栏；Linux 使用原生窗口装饰，不同桌面环境的表现可能有差异。
 
 ---
 
@@ -213,41 +151,36 @@ npm pack             # 生成 dsh-islands-ui-<version>.tgz
 
 **安装后没有变化？**
 
-先确认当前 profile 里插件是启用状态，并刷新页面（`⌘R` / `Ctrl+R`）。本地开发版还需要确认 `client.js` 已经重新构建；从 npm 安装则检查 `npm view dsh-islands-ui version` 与已安装版本是否一致。DSH 版本低于 `0.2.2-rc.1` 时不会加载。
+先确认当前 DSH 配置（profile）中插件已启用，并刷新页面（`⌘R` / `Ctrl+R`）。如果 DSH 版本低于 `0.2.2-rc.1`，请先升级 DSH；也可以到 **设置 → Islands UI** 查看皮肤状态。
 
 **会修改我的会话、设置或插件数据吗？**
 
-不会。皮肤只注入样式并注册浏览器端插槽；左侧栏固定、置顶聚合、定位和强调色都存在 `localStorage` 里，不写会话或 profile 数据。
+不会。皮肤只重绘界面；总开关、强调色、置顶折叠和左侧栏顺序保存在本机浏览器存储中。
 
 **怎么彻底恢复默认外观？**
 
-设置 → Islands UI 关闭总开关即可立即恢复。需要连偏好一起清空时，删除 `dsh-islands-ui:*` 这几个 `localStorage` key（见[状态存储](#状态存储)）。
+在 **设置 → Islands UI** 关闭总开关即可立即恢复。需要连偏好一起重置时，清除该站点的本地存储。
 
 **可以和别的主题/皮肤同时开吗？**
 
-不建议。两个皮肤会同时改同一批 `--dsw-*` token 和布局，后加载的会覆盖前一个。dsh-market 的「主题」Tab 本身按单主题激活管理；如果你手动装了多个，保留一个即可。
+不建议。多个皮肤会同时修改同一批界面配色和布局规则，后加载的会覆盖前一个。
 
 **为什么某些界面还是旧样式？**
 
-说明皮肤**检测到核心宿主契约缺失，已自动关闭**。DSH 升级可能改掉 `data-slot`、`data-phase` 等公开契约；半启用会变成双栏重叠，所以插件宁可保持默认外观：右下角会有提示，设置 → Islands UI 顶部有黄色说明条并列出缺失的契约。把 Islands UI 更新到适配当前 DSH 的版本即可恢复；确认界面正常也可以点「仍然启用」临时开启（下次启动重新检测）。
+DSH 升级可能改变界面结构；皮肤检测到关键界面不匹配时会自动停用，避免出现双栏重叠。更新 Islands UI 到适配当前 DSH 的版本后刷新即可恢复；确认界面正常时，也可以在设置页点「仍然启用」临时开启（下次启动会重新检测）。
 
 **Windows / Linux 能用吗？**
 
-已按原生标题栏（Windows 不渲染插件顶栏）、左侧栏、右侧工具原生位置和标题栏高度适配，但还没有在真实 Windows / Linux 机器上实测。遇到标题栏、拖拽区或窗口按钮问题，欢迎按 Issue 模板反馈。
-
-**会发到插件商店吗？**
-
-npm 发布后 DSHHub 会自动发现；dsh-market 的「主题」Tab 读取 awesome-dsh-plugin 目录，需要仓库满足收录条件后提交一条 `theme` 条目。具体步骤见 [docs/publishing.md](docs/publishing.md)。
+Windows 已实测，使用原生标题栏布局；Linux 按原生窗口装饰适配，尚未实测。遇到标题栏、拖拽区或窗口按钮问题，欢迎反馈。
 
 ---
 
-## 贡献与安全
+## 反馈
 
-- 开发、构建、提交约定和 PR 清单：[CONTRIBUTING.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/CONTRIBUTING.md)
-- Bug / 兼容性问题：[Issues](https://github.com/DawnCHL/dsh-islands-ui/issues)
-- 改进或新功能：欢迎直接开 PR
-- 特别欢迎 Windows / Linux 的实测反馈（截图 + 系统版本 + 窗口尺寸）
-- 安全漏洞：不要开公开 Issue，按 [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md) 走私密报告
+- 遇到 Bug 或兼容性问题：[提交 Issue](https://github.com/DawnCHL/dsh-islands-ui/issues)
+- 反馈时请附上系统版本、DSH 版本、窗口尺寸和截图。
+- 功能建议也欢迎在 Issues 中提出。
+- 安全漏洞：请不要开公开 Issue，按 [SECURITY.md](https://github.com/DawnCHL/dsh-islands-ui/blob/main/SECURITY.md) 私密报告。
 
 ## License
 
