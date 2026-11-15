@@ -195,16 +195,35 @@ export const CONTENT_PARTS = {
 export const SETTINGS_PARTS = {
   overlay: 'settings-overlay',
   mask: 'settings-mask',
-  panel: 'settings-panel',
+  balanceCard: 'account-balance-card',
+};
+
+/**
+ * The dialog's own four seats. These local names (`header`, `options`,
+ * `close`, `nav`) are generic enough to appear inside a settings page's
+ * content, so they are only read from the dialog's direct children.
+ */
+export const SETTINGS_SHELL_PARTS = {
   navTitle: 'settings-nav-title',
   nav: 'settings-nav',
+  header: 'settings-header',
+  options: 'settings-options',
+};
+
+/** The header's own close control, one level below the header seat. */
+export const SETTINGS_HEADER_PARTS = {
+  close: 'settings-close',
+};
+
+/**
+ * The navigation's inner parts. `active` is especially common, so this region
+ * is anchored to the navigation itself and never sees page content.
+ */
+export const SETTINGS_NAV_PARTS = {
   navList: 'settings-nav-list',
   navCell: 'settings-nav-cell',
   active: 'settings-nav-active',
   navIcon: 'settings-nav-icon',
-  card: 'settings-card',
-  section: 'settings-section',
-  balanceCard: 'account-balance-card',
 };
 
 /** The skin's own update entry, read from the host's foot and toggle seats. */
@@ -298,18 +317,35 @@ export const PART_REGIONS = Object.freeze([
     parts: COMPOSER_PARTS,
   },
   {
+    // `panel` is a root part: only the dialog itself may take it. The plugin
+    // settings pages also use a local `.panel` for their tab body, and
+    // broadcasting the panel part into page content resized that body to the
+    // skin's 860px dialog (issue #5, item 2).
     id: 'settings',
     within: HOST.SETTINGS_OVERLAY,
     parts: SETTINGS_PARTS,
+    rootParts: { panel: 'settings-panel' },
   },
   {
-    id: 'settings-panel',
+    // The dialog's seats are direct children. Keeping them as rootParts stops
+    // a page's own `.header`, `.options` or `.close` from inheriting them.
+    id: 'settings-shell',
     within: partSelector('settings-panel'),
-    parts: {
-      header: 'settings-header',
-      options: 'settings-options',
-      close: 'settings-close',
-    },
+    parts: {},
+    rootParts: SETTINGS_SHELL_PARTS,
+  },
+  {
+    // `navCell`/`active`/`navIcon` stay inside the navigation subtree.
+    id: 'settings-nav',
+    within: partSelector('settings-nav'),
+    parts: SETTINGS_NAV_PARTS,
+  },
+  {
+    // The close button sits inside the header, so it gets its own seat.
+    id: 'settings-header',
+    within: partSelector('settings-header'),
+    parts: {},
+    rootParts: SETTINGS_HEADER_PARTS,
   },
 ]);
 

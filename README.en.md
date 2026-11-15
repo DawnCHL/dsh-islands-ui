@@ -32,7 +32,7 @@ dsh plugin --profile web add dsh-islands-ui
 
 Then refresh (`⌘R` / `Ctrl+R`). The skin is enabled by default. Turn it off at **Settings → Islands UI** to restore the stock appearance immediately; your preference and accent are kept.
 
-> Requires DeepSeek Harness `0.2.2-rc.1` or `0.2.2-rc.2`. The client reads the running release (`window.__DSH_BOOT__.release.version`) and injects the sidebar structure stylesheet for that build; older `0.2.x` builds fall back to the base stylesheet. The package declares `dsh.bundle` + `dsh.client`, so `dsh plugin add` installs and mounts it without editing the profile by hand.
+> Requires DeepSeek Harness `0.2.2-rc.1`, `0.2.2-rc.2` or `0.2.2-rc.3`. The stylesheet adapts to the sidebar structure by the host parts that are present, not by switching sheets per release; the running release is only shown in Settings and used by the compatibility gate. Older `0.2.x` builds fall back to the base stylesheet. The package declares `dsh.bundle` + `dsh.client`, so `dsh plugin add` installs and mounts it without editing the profile by hand.
 
 ### Uninstall
 

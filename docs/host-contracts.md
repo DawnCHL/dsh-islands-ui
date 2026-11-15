@@ -26,7 +26,9 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 - 写 `data-islands-part`（多值空格分隔）；
 - 之后由 `MutationObserver` 处理新挂载节点和 `class` 变化。
 
-区域可以嵌套。子区域可以锚在父区域写出的部件上（例如 `settings-panel`、`settings-area`），遍历器写完父部件后会再检查一次区域锚点。
+区域可以嵌套。子区域可以锚在父区域写出的部件上（例如 `settings-panel`、`settings-nav`、`settings-area`），遍历器写完父部件后会再检查一次区域锚点。
+
+`parts` 会作用于区域内的所有后代，因此 `panel`、`card`、`section`、`header` 这类通用本地名不能直接放进 `parts`：DSH 的插件设置页也会使用这些类名。对话框外壳的座位改用 `rootParts` 只匹配直接子级，`close` 再锚在 `header` 区域里；`navCell`/`active` 等只在 `settings-nav` 子树内匹配。新增区域时优先选择更窄的锚点，而不是把通用名字广播给整棵子树。
 
 ## 宿主改名时
 

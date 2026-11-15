@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.2 — 2026-11-15
+
+### 修复
+
+- 设置入口不再先展开账号菜单：打开菜单后在绘制前同步点击“设置”，齿轮直达设置页。设置触发器在 rc.3 的侧栏脚注中已不存在，回退路径不再依赖固定延时。
+- 设置页部件改为按作用域标记：`settings-panel` 只落在设置对话框本身，`nav`/`navTitle`/`header`/`options` 只读对话框直接子级，`close` 只在 header 内标记，导航行只在导航子树内标记。修复「内置插件」页的 tab 面板被误标成设置面板、套上 860px 宽度后被内容列裁切的问题；插件页自己的 `.panel`/`.section`/`.card` 不再获得设置页部件。
+- Windows 标题栏按钮区颜色跟随皮肤 token：桌面端从 `--dsw-specific-sidebar-fill` 测量 caption 颜色，但它的 observer 只监听 body 的 `style`/`data-ds-dark-theme`。皮肤启用/停用时写入一个无副作用的行内自定义属性，触发重新测量，消除三大键区域与标题栏的色差。
+- Windows 左上角原生侧栏开关改为皮肤的保宽折叠：原生 `toggleSidebar` 关闭即丢弃拖拽宽度、重新打开回到默认 280px；现在截获该按钮的点击并走 `data-islands-workspace-collapsed` 路径，宽度不再丢失。macOS / Linux 的自绘顶栏开关不变。
+- 模型选择器与输入区底行对齐：`.isl-model` 改为 flex 容器，消除 inline-flex 触发器在块级 wrapper 中产生的行盒/基线空隙。
+
+### 兼容性
+
+- 设置页不再按通用 local class（`card`/`section`/`panel`）广播部件；这些名字在 DSH 自己的插件设置页里也会出现。第三方设置页现在保持原生几何，只继承颜色 token。
+- `npm run check` 新增设置页部件作用域断言；`check:parts` 的部件表按新的对话框/导航/头部作用域标记。
+
 ## 1.1.1 — 2026-11-14
 
 ### 界面

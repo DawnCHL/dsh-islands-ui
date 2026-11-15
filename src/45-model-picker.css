@@ -5,6 +5,8 @@
 
 body[data-islands-ui] .isl-model {
   position: relative;
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 

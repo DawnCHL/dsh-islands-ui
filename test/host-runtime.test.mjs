@@ -43,3 +43,27 @@ test('part names are unique kebab-case words', () => {
 test('host attributes are data attributes', () => {
   for (const name of HOST_ATTRIBUTES) assert.match(name, /^data-[a-z0-9-]+$/u);
 });
+
+test('generic settings page classes stay out of the settings part tables', () => {
+  const regions = new Map(PART_REGIONS.map((region) => [region.id, region]));
+  const settings = regions.get('settings');
+  const shell = regions.get('settings-shell');
+  const nav = regions.get('settings-nav');
+  const header = regions.get('settings-header');
+  assert.ok(settings !== undefined);
+  assert.ok(shell !== undefined);
+  assert.ok(nav !== undefined);
+  assert.ok(header !== undefined);
+  // The dialog itself is the only element allowed to take the panel part.
+  assert.equal(settings.rootParts?.panel, 'settings-panel');
+  for (const local of ['panel', 'card', 'section', 'header', 'options', 'close', 'active']) {
+    assert.ok(!(local in settings.parts), `settings.parts must not broadcast ${local}`);
+  }
+  // The shell seats are direct children of the dialog only.
+  assert.deepEqual(shell.parts, {});
+  assert.deepEqual(Object.keys(shell.rootParts ?? {}).sort(), ['header', 'nav', 'navTitle', 'options']);
+  // Nav rows and the `active` flag stay inside the navigation subtree.
+  assert.deepEqual(Object.keys(nav.parts).sort(), ['active', 'navCell', 'navIcon', 'navList']);
+  // The close control sits inside the header, one level below its seat.
+  assert.deepEqual(header.rootParts, { close: 'settings-close' });
+});

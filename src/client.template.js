@@ -18,6 +18,8 @@ window.__ModuleLoader__.load({
     const ATTRIBUTE = SKIN_ATTR;
     const STORAGE_KEY = 'dsh-islands-ui:enabled';
     const WORKSPACE_ATTR = 'data-islands-workspace-collapsed';
+    /** Inline no-op that wakes the desktop caption-colour observer. */
+    const CAPTION_SYNC_PROPERTY = '--isl-caption-sync';
     /** Escape hatch, session scoped so the next launch re-runs the check. */
     const FORCE_KEY = 'dsh-islands-ui:force';
     /**
@@ -250,8 +252,18 @@ window.__ModuleLoader__.load({
     function syncAttribute() {
       const body = document.body;
       if (body === null) return;
-      if (enabled) body.setAttribute(ATTRIBUTE, '');
-      else body.removeAttribute(ATTRIBUTE);
+      if (enabled) {
+        body.setAttribute(ATTRIBUTE, '');
+        // Desktop colours the Windows caption buttons from a probe that reads
+        // --dsw-specific-sidebar-fill. Its observer watches body's style and
+        // data-ds-dark-theme, not the skin's data-islands-ui, so the caption is
+        // otherwise measured before this attribute turns the token white.
+        // Writing the custom property nudges that observer to re-measure.
+        body.style.setProperty(CAPTION_SYNC_PROPERTY, '1');
+      } else {
+        body.removeAttribute(ATTRIBUTE);
+        body.style.removeProperty(CAPTION_SYNC_PROPERTY);
+      }
     }
 
     function subscribe(listener) {
@@ -669,6 +681,13 @@ window.__ModuleLoader__.load({
       window.setTimeout(tick, 140);
     }
 
+    /** The Settings row inside the account menu, if that menu is open. */
+    function accountSettingsItem() {
+      return [
+        ...document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menu"] [role="menuitemradio"], [role="menu"] button, [role="menu"] a'),
+      ].find((element) => /设置|Settings|偏好|Preferences/i.test(element.textContent ?? '')) ?? null;
+    }
+
     function openSettings(options) {
       const section = options?.section;
       // The dialog may already be open (the compatibility banner lives inside
@@ -677,7 +696,7 @@ window.__ModuleLoader__.load({
         revealSettingsSection(section);
         return;
       }
-      // The host exposes a direct settings trigger in the sidebar foot; the
+      // Some builds expose a direct settings trigger in the sidebar foot; the
       // account menu path remains for builds that fold Settings into a menu.
       const direct = document.querySelector(HOST.SETTINGS_TRIGGER);
       if (direct instanceof HTMLElement) {
@@ -687,14 +706,38 @@ window.__ModuleLoader__.load({
       }
       const trigger = document.querySelector(`${partSelector('foot-area')} button[aria-haspopup="menu"]`);
       if (trigger instanceof HTMLElement) {
-        trigger.click();
-        window.setTimeout(() => {
-          const item = [
-            ...document.querySelectorAll('[role="menu"] [role="menuitem"], [role="menu"] [role="menuitemradio"], [role="menu"] button, [role="menu"] a'),
-          ].find((element) => /设置|Settings|偏好|Preferences/i.test(element.textContent ?? ''));
-          if (item instanceof HTMLElement) item.click();
-          revealSettingsSection(section);
-        }, 60);
+        // Click the account menu's Settings row as soon as it exists. Waiting a
+        // fixed delay lets the account menu paint and reads as an extra step.
+        // A mutation observer fires before the next paint, so the menu never
+        // becomes the visible intermediate state.
+        let observer = null;
+        let timer = null;
+        const stop = () => {
+          observer?.disconnect();
+          observer = null;
+          if (timer !== null) window.clearTimeout(timer);
+          timer = null;
+        };
+        const clickSettings = () => {
+          if (document.querySelector(HOST.SETTINGS_DIALOG) !== null) {
+            stop();
+            return true;
+          }
+          const item = accountSettingsItem();
+          if (!(item instanceof HTMLElement)) return false;
+          stop();
+          item.click();
+          return true;
+        };
+        if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
+        if (!clickSettings()) {
+          observer = new MutationObserver(() => {
+            clickSettings();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+          timer = window.setTimeout(stop, 800);
+        }
+        revealSettingsSection(section);
         return;
       }
       try {
@@ -2749,6 +2792,27 @@ window.__ModuleLoader__.load({
               observer?.disconnect();
             };
           }, 'dsh-islands-ui: native collapse conversion');
+
+          // Windows keeps DSH's native toggle in the caption row. The native
+          // layout action closes the sidebar by setting its width to 0 and
+          // reopens it at the contract default, forgetting the user's drag
+          // width. Run the skin's width-preserving workspace collapse from
+          // that same control instead; the native button stays where it is.
+          ctx.effect(() => {
+            const onClick = (event) => {
+              if (!(event.target instanceof Element)) return;
+              if (!document.body.hasAttribute(ATTRIBUTE)) return;
+              if (!document.documentElement.hasAttribute('data-windows-titlebar')) return;
+              if (!(event.target.closest(HOST.SIDEBAR_TOGGLE) instanceof HTMLElement)) return;
+              // React delegates its onClick at the root; stop the click before
+              // it reaches that listener so DSH's toggleSidebar never runs.
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              toggleWorkspace();
+            };
+            document.addEventListener('click', onClick, true);
+            return () => document.removeEventListener('click', onClick, true);
+          }, 'dsh-islands-ui: windows workspace toggle');
         };
         skinRegistrar = () => registerSkinChrome(ctx);
 

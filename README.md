@@ -35,7 +35,7 @@ dsh plugin --profile web add dsh-islands-ui
 
 安装后刷新页面（`⌘R` / `Ctrl+R`）。皮肤默认开启；可在 **设置 → Islands UI** 关闭，关闭后立即恢复 Harness 默认外观，偏好和强调色会保留。
 
-> 适用于 DSH `0.2.2-rc.1` 与 `0.2.2-rc.2`。客户端会读取运行中的 DSH 版本（`window.__DSH_BOOT__.release.version`），自动选用对应的侧栏结构样式；更早的 `0.2.x` 构建回退到基础样式。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
+> 适用于 DSH `0.2.2-rc.1`、`0.2.2-rc.2` 与 `0.2.2-rc.3`。样式按宿主部件是否存在适配侧栏结构，不再按版本切换样式表；运行中的版本只用于设置页展示与兼容门禁。更早的 `0.2.x` 构建回退到基础样式。包内声明了完整的 `dsh.bundle` + `dsh.client` manifest，`dsh plugin add` 会自动写入 profile 的 bundle 栈，不需要手工改 `cordis.patch.yml`。
 
 ### 卸载
 

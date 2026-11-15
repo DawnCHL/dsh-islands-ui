@@ -159,6 +159,13 @@ body[data-islands-ui] [data-sidebar-right-panel][data-sidebar-right-open]:not([d
    column hides, so the left column never re-renders or re-flows.
    ========================================================================== */
 
+/* The width handle keeps its expanded inline position while the workspace is
+   collapsed, which would leave an invisible drag target over the conversation.
+   The workspace must be expanded to resize it. */
+body[data-islands-ui][data-islands-workspace-collapsed] [data-side="sidebar"] {
+  display: none;
+}
+
 /* The right column must keep its own track while the workspace is collapsed.
    Pin it to 0 only while the right pane is closed; when it opens, use the
    pane's PREFERRED width (published by the client). Reading the current
