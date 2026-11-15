@@ -31,6 +31,7 @@ npm pack --dry-run
 - 不要为每个小改动单独提交。把多轮改动合并成一次提交，并在 commit body 里用几条短句说明每一类改动。
 - 提交前跑 `npm run check`，确认 `client.js` 已重新生成。
 - 不要提交 `.DS_Store`、`node_modules/` 或本地打包的 `.tgz`。
+- 如果改动修复了 issue，在 PR 描述或 commit body 里写 `Closes #123`（多个 issue 用逗号分隔）。合入 `main` 后 GitHub 会自动关闭对应 issue；只打 tag 或发布 npm 版本不会触发自动关闭。
 
 示例：
 
@@ -50,6 +51,7 @@ fix: 置顶项对齐与窄屏抽屉修复
 - [ ] 窄屏（<768px）和宽屏都检查过
 - [ ] 没有引入本地绝对路径、`@local/...` 包名或调试日志
 - [ ] 如果改了可见界面，附截图或录屏
+- [ ] 关联 issue 已用 `Closes #...` 标注，或在 PR 中说明了关闭原因
 
 ## 兼容性
 
