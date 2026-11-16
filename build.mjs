@@ -32,15 +32,24 @@ const css = parts.join('\n\n');
 const runtime = await readFile(join(srcDir, 'host', 'runtime.js'), 'utf8');
 const hostRuntime = runtime.replace(/^export\s+/gmu, '').trim();
 
+// The smooth caret is a DOM controller with no template internals, so it is
+// inlined as its own module rather than living in the (much larger) template.
+const caret = await readFile(join(srcDir, 'host', 'caret.js'), 'utf8');
+const caretModule = caret.replace(/^export\s+/gmu, '').trim();
+
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 if (!template.includes('/*__HOST_RUNTIME__*/')) {
   throw new Error('client.template.js lost its host-runtime placeholder');
 }
+if (!template.includes('/*__CARET_MODULE__*/')) {
+  throw new Error('client.template.js lost its caret placeholder');
+}
 const built = template
   .replace('/*__HOST_RUNTIME__*/', () => hostRuntime)
+  .replace('/*__CARET_MODULE__*/', () => caretModule)
   .replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
-const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length} bytes of CSS and host bridge`;
+const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length} bytes of CSS and host bridge`;
 
 if (process.argv.includes('--check')) {
   let current = '';

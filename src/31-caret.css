@@ -1,0 +1,104 @@
+/* ==========================================================================
+   Islands UI · 31 composer caret
+   The send circle and the smooth caret of the conversation composer. Both are
+   driven by the accent token, so a custom Islands accent reaches them without
+   naming a host class: the send button is read through its skin part, and the
+   caret through the composer's own `data-composer-*` hooks.
+   ========================================================================== */
+
+/* The send circle is the composer's primary action. The stock sheet paints it
+   with the info-fill token, which a custom accent does not remap; use the
+   accent token so the setting reaches it. The stock hover still applies while
+   following the theme; a custom accent derives its own shade in the direction
+   the stock token uses for that theme. */
+body[data-islands-ui] [data-islands-part~="composer-primary"] {
+  background-color: var(--dsw-alias-state-business-primary);
+}
+
+body[data-islands-ui][data-islands-accent] [data-islands-part~="composer-primary"]:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--isl-accent) 86%, #fff);
+}
+
+body[data-islands-ui][data-islands-accent][data-ds-dark-theme] [data-islands-part~="composer-primary"]:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--isl-accent) 86%, #000);
+}
+
+/* ---- Caret ---------------------------------------------------------------
+   The caret always follows the theme accent: a custom Islands accent remaps
+   `--dsw-alias-state-business-primary`, so both the native caret and the
+   smooth overlay below read the same token. */
+
+body[data-islands-ui] [data-composer-input] {
+  caret-color: var(--dsw-alias-state-business-primary);
+}
+
+/* Smooth caret: while the overlay is painting a composer, that composer's
+   native caret is hidden. Every fallback state (IME composition, no
+   measurement, a non-collapsed selection) removes the marker first, so the
+   native caret is never lost. A selected command chip suppresses the caret
+   entirely, as in the stock composer. */
+body[data-islands-ui][data-islands-smooth-caret] [data-composer-input][data-islands-caret-active] {
+  caret-color: transparent;
+}
+
+body[data-islands-ui][data-islands-smooth-caret] [data-composer-input][data-composer-composing]:not([data-composer-chip-selected]) {
+  caret-color: var(--dsw-alias-state-business-primary);
+}
+
+body[data-islands-ui] [data-composer-input][data-composer-chip-selected] {
+  caret-color: transparent;
+}
+
+/* The overlay is a sibling of the contenteditable inside its positioned
+   wrapper, so it scrolls and clips with the draft instead of floating over
+   the island. 2px is a deliberate accent treatment at the composer's 14px
+   type size (the native caret is 1px); height matches the text glyph box. */
+.isl-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  display: block;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--dsw-alias-state-business-primary, var(--isl-accent, #4176e6));
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 150ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.isl-caret.is-jump {
+  transition: none;
+}
+
+.isl-caret.is-on {
+  opacity: 1;
+  animation: isl-caret-blink 1.06s step-end infinite;
+}
+
+/* Keep the caret solid while it is moving; the blink resumes after a short
+   idle, like a native caret. */
+.isl-caret.is-typing {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes isl-caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-caret,
+  .isl-caret.is-jump {
+    transition: none;
+  }
+}

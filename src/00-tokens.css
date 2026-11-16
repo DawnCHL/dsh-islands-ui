@@ -174,3 +174,25 @@ html[data-platform='darwin'] body[data-islands-ui][data-ds-dark-theme] {
   --dsw-specific-menu: color-mix(in srgb, var(--isl-surface) 88%, transparent);
   --dsw-alias-menu-group-header-fill: color-mix(in srgb, var(--isl-surface-muted) 94%, transparent);
 }
+
+/* DSH shapes every corner through a global `*` rule
+   (`corner-shape: superellipse(1.5)`), which renders a 50% radius as the
+   host's iOS-style squircle instead of a circle. The islands keep that
+   language, but anything the skin means as a true circle — or as a pill whose
+   ends must stay round — opts back to round arcs. Chromium supports
+   `corner-shape`; elsewhere the declaration is ignored and the radius alone
+   already draws a circle. */
+body[data-islands-ui] .isl-updateButton,
+body[data-islands-ui] .isl-updateErrorDot,
+body[data-islands-ui] .isl-dmx-dot,
+body[data-islands-ui] .isl-railRipple,
+body[data-islands-ui] .isl-modelBack,
+body[data-islands-ui] .isl-effortReset,
+body[data-islands-ui] .isl-effortDot,
+body[data-islands-ui] .isl-effortSlider::-webkit-slider-thumb,
+body[data-islands-ui] .isl-switch,
+body[data-islands-ui] .isl-switchThumb,
+body[data-islands-ui] .isl-accentSwatch,
+body[data-islands-ui] .isl-accentCustom {
+  corner-shape: round;
+}

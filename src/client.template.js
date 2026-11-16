@@ -13,6 +13,7 @@ window.__ModuleLoader__.load({
     const ReactDOM = require('react-dom');
     const h = React.createElement;
     /*__HOST_RUNTIME__*/
+    /*__CARET_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -131,6 +132,10 @@ window.__ModuleLoader__.load({
         compatStructure: '侧栏结构',
         compatStructureFlat: '平铺',
         compatStructureScroll: '滚动容器',
+        smoothCaret: '平滑输入光标',
+        smoothCaretDesc: '仅作用于对话输入框：光标随文字平滑滑动，颜色跟随强调色；关闭后使用原生输入光标。',
+        smoothCaretCompat: '当前 DSH 构建与平滑光标不兼容，已自动回退原生光标；此开关暂不可用。',
+        smoothCaretYielded: '检测到其他光标插件，平滑光标已让位；停用该插件后会自动恢复。',
       },
       en: {
         title: 'Islands interface',
@@ -220,6 +225,13 @@ window.__ModuleLoader__.load({
         compatStructure: 'Sidebar structure',
         compatStructureFlat: 'flat',
         compatStructureScroll: 'scroll containers',
+        smoothCaret: 'Smooth input caret',
+        smoothCaretDesc:
+          'Applies to the conversation composer: the caret glides between positions and follows the accent color; turn off to use the native caret.',
+        smoothCaretCompat:
+          'This DSH build is not compatible with the smooth caret; the native caret is used and this switch is unavailable.',
+        smoothCaretYielded:
+          'Another caret plugin is active; the smooth caret yields to it and resumes when that plugin is disabled.',
       },
     };
 
@@ -283,6 +295,7 @@ window.__ModuleLoader__.load({
         /* private mode: the choice still applies for this page. */
       }
       syncAttribute();
+      syncCaretOverlay();
       for (const listener of listeners) listener();
     }
 
@@ -327,6 +340,11 @@ window.__ModuleLoader__.load({
 
     function useCompat() {
       return React.useSyncExternalStore(subscribeCompat, getCompatSnapshot);
+    }
+
+    /** The smooth caret keeps its own compatibility state; see src/host/caret.js. */
+    function useCaretCompat() {
+      return React.useSyncExternalStore(subscribeCaretCompat, getCaretCompatSnapshot);
     }
 
     function currentCopy() {
@@ -1472,7 +1490,11 @@ window.__ModuleLoader__.load({
         {
           type: 'button',
           className: `isl-updateButton is-${phase}${clickable ? ' is-clickable' : ''}${pending ? ' is-pending' : ''}`,
-          'data-phase': phase,
+          // Not `data-phase`: that is a host contract, and the conversation
+          // sheet's `[data-phase] { background: transparent }` rule has the same
+          // specificity as this button's own surface — it landed later in the
+          // sheet and erased the entry's fill.
+          'data-update-phase': phase,
           'data-clickable': clickable ? 'true' : 'false',
           title: detail,
           'aria-label': label,
@@ -1521,7 +1543,7 @@ window.__ModuleLoader__.load({
                   'span',
                   {
                     className: `isl-updateButton is-preview is-${phase}`,
-                    'data-phase': phase,
+                    'data-update-phase': phase,
                     title: label,
                     'aria-hidden': 'true',
                   },
@@ -2425,14 +2447,28 @@ window.__ModuleLoader__.load({
     function IslandsSettingsPage() {
       const on = useEnabled();
       const compat = useCompat();
+      const caretCompat = useCaretCompat();
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
       const blocked = compat.status === 'missing';
+      const caretYielded = caretCompat.status === 'yielded';
+      const caretBlocked = caretCompat.status === 'missing' || caretYielded;
       const [accent, setAccent] = React.useState(readAccent);
+      const [smooth, setSmooth] = React.useState(readSmoothCaretSetting);
+      const smoothActive = smooth && !caretBlocked;
+      // Opening the page re-probes: the composer may have mounted since the
+      // controller's last look, and the row must not keep a stale verdict.
+      React.useEffect(() => {
+        probeCaretCompatibility();
+      }, []);
       const chooseAccent = (color) => {
         setAccent(color);
         applyAccent(color);
         storeAccent(color);
+      };
+      const chooseSmoothCaret = (next) => {
+        setSmooth(next);
+        setSmoothCaret(next);
       };
       return h(
         'div',
@@ -2532,6 +2568,44 @@ window.__ModuleLoader__.load({
             ),
           ),
         ),
+        h(
+          'div',
+          { className: 'isl-prefRow' },
+          h(
+            'div',
+            { className: 'isl-prefText' },
+            h('div', { className: 'isl-prefTitle' }, copy.smoothCaret),
+            h('div', { className: 'isl-prefDesc' }, copy.smoothCaretDesc),
+            caretBlocked
+              ? h(
+                  'div',
+                  {
+                    className: 'isl-prefWarn',
+                    title: caretCompat.missing.length > 0 ? caretCompat.missing.join(' · ') : undefined,
+                  },
+                  caretYielded ? copy.smoothCaretYielded : copy.smoothCaretCompat,
+                )
+              : null,
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'switch',
+              className: 'isl-switch',
+              'aria-checked': smoothActive,
+              'aria-label': copy.smoothCaret,
+              title: caretBlocked
+                ? caretYielded
+                  ? copy.smoothCaretYielded
+                  : copy.smoothCaretCompat
+                : copy.smoothCaret,
+              disabled: caretBlocked,
+              onClick: () => chooseSmoothCaret(!smooth),
+            },
+            h('span', { className: 'isl-switchThumb' }),
+          ),
+        ),
         // Preview hidden on request. The component and its styles stay in place;
         // restore the next line to show the state gallery again.
         // h(IslandsUpdateShowcase, { copy }),
@@ -2588,6 +2662,13 @@ window.__ModuleLoader__.load({
         // Everything below turns the chrome on, so it runs only after the gate
         // has confirmed this build still matches the stylesheet.
         const registerSkinChrome = (ctx) => {
+          // The caret controller only runs with the chrome on: it paints into
+          // the composer and reads the skin's body attribute on every frame.
+          ctx.effect(() => {
+            installCaretController();
+            return () => uninstallCaretController();
+          }, 'dsh-islands-ui: smooth composer caret');
+
           ctx.effect(() => {
             const root = document.documentElement;
             let panel = null;
