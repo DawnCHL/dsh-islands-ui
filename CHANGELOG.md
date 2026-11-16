@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.2 — 2026-11-16
+
+### 修复
+
+- 窄栏下 `sidebar.footer.action` 的宽栏插件按钮撑出 48px 轨道：皮肤按宿主的 slot 锚点（`[data-slot="sidebar.footer.action"]`，`display: contents`）把直接访客控件归一化为 36px 方块，文字标签移入可访问树（插件自己的 `title`/`aria-label` 保留），并补齐 hover、`focus-visible`、`aria-pressed`/`aria-expanded` 状态。只作用于槽位的直接访客，插件组件内部的按钮不受影响。
+- 账号行旁的访客入口（移动插件那类）与 36px 账号并排时溢出轨道：行改为纵向排列，访客收成 36px tile 放在账号上方。
+- 轨道脚注的齿轮、更新入口和列表预留不再假设「底部只有账号」：新增 `src/host/foot.js` 实测 `foot-area` 高度并发布 `--isl-foot-height`，三处锚点从它派生；脚注被宿主隐藏时回退到旧几何。1 个、2 个或更多插件按钮都成立。
+- 脚注测量只观察 `data-islands-part` 属性，流式会话 DOM 不再进入观察路径。
+
+### 兼容性
+
+- 访客归一化只读宿主契约 `[data-slot="sidebar.footer.action"]`、`settings-trigger-row` 部件和通用元素/ARIA 角色，不含插件包名、类名前缀或专属属性；`docs/host-contracts.md` 记录了共享槽位所有权与访客契约。
+- 未展开控件的 `overflow: clip` 保留；`aria-expanded='true'` 的控件改为 `overflow: visible`，插件在控件内部渲染的弹出层不被裁切。
+
 ## 1.2.1 — 2026-11-16
 
 ### 修复
