@@ -1,5 +1,27 @@
 # Changelog
 
+## 未发布
+
+### 界面
+
+- 新增平滑输入光标：覆盖光标与文字同高（取选区字形框高度），在同一行内以 150ms 的 `transform` 过渡平滑滑动；换行时直接跳到新行，避免斜向拖动。输入法组词期间回退到原生光标，指令 chip 选中、非折叠选区或失焦时隐藏覆盖光标。设置 → Islands UI 新增「平滑输入光标」开关，默认开启，偏好写入 `localStorage`（`dsh-islands-ui:smooth-caret`）。
+- 对话输入框的光标统一由强调色 token 驱动：默认读取主题的 `--dsw-alias-state-business-primary`，自定义强调色时同步变化；平滑光标开启时由一层 2px 覆盖光标绘制，绘制期间原生光标置为透明，二者使用同一颜色。
+- 发送按钮跟随强调色：原生按钮读取的是 `--dsw-alias-button-info-fill`，不会随自定义强调色变化；现改为 `--dsw-alias-state-business-primary`，并在自定义强调色时按亮/暗主题派生 hover 色。按钮通过 `composer-primary` 部件读取，不写哈希类名。
+
+### 修复
+
+- 窄屏（≤767px）右侧栏被工作区抽屉遮挡：右栏在窄屏由宿主切换为 `fullscreen` 覆盖层，但仍挂载在框架内的零宽右列中，抽屉遮罩（z-index 70）因此盖在它上面——抽屉一打开右侧栏就整块消失，而切换按钮仍显示“已打开”，看起来再也叫不出来。现在全屏右栏在窄屏下升到遮罩、抽屉和窗口外壳层之上（z-index 78）。
+- 窄屏全屏右栏的定位偏出画布：宿主用 `right: 0` 把它挂在零宽右列上，皮肤的 5px 内边距使它左移一格、右侧留出 5px 画布。现在按画布间隙把它对齐到窗口外沿。
+- 圆形控件被宿主的 `corner-shape` 规则压成圆角方形：DSH 用一条全局 `*, :before, :after { corner-shape: superellipse(1.5) }` 给所有圆角换成了 iOS 式超椭圆，`border-radius: 50%` 只决定圆角大小、不决定曲线形状，所以更新入口、开关、强调色色块、点阵圆点、滑块圆钮等看着都是"方圆"。皮肤自己的圆形控件显式声明 `corner-shape: round`（Chromium 之外该声明被忽略，退回普通圆角）。
+- 更新入口的底色被对话区规则覆盖：按钮原本沿用了宿主的 `data-phase` 契约，而 `src/30-conversation.css` 里有 `body[data-islands-ui] [data-phase] { background: transparent }`（同特异性、且该文件在样式表末尾），于是未 hover 时按钮底色全透明、只剩阴影，hover 才因为规则更具体变蓝。属性改为皮肤自己的 `data-update-phase`，宿主契约规则不再命中。
+- 更新入口改为跟随强调色：底色与阴影读 `--dsw-alias-state-business-primary`（皮肤把它重映射为自定义强调色），hover 色由同一 token 派生；之前是两个写死的品牌蓝，自定义强调色时不会跟随。窄屏全屏右栏改为 `position: fixed` 贴视口：宿主把它挂在右轨里用 `right: 0` 定位，右轨一旦有宽度面板就被推出屏幕，画面只剩空画布而按钮仍显示“已打开”。
+- 更新入口的 `is-pending` 不再使用整体 `opacity`：那会把圆面的颜色淡化到画布色、却让彩色阴影留在原处，读起来像一枚发白的圆片浮在阴影上。改为保持饱和底色、取消上浮并收紧阴影，同时覆盖仍生效的 hover 规则（原先 hover 的特异性高于 pending）。
+
+### 兼容性
+
+- 平滑光标使用独立的兼容探测，与全局皮肤门禁分离：只检查 composer 的公开钩子（`[data-composer-input]`、`[data-input-scroll]`、定位包裹层）与 `data-*caret*` 外部光标标记，不再按 DSH 版本号判断。不匹配时只回退原生光标，在设置页对应开关下显示行内提示并禁用该开关，不影响皮肤其他部分；兼容后按用户原偏好自动恢复。
+- 平滑光标的控制器拆成 `src/host/caret.js`，与 `src/host/runtime.js` 一样由 `build.mjs` 内联，不依赖模板内部符号；样式独立为 `src/31-caret.css`。`data-composer-input`、`data-composer-composing`、`data-composer-chip-selected`、`data-input-scroll` 登记进宿主契约表，`data-islands-smooth-caret`、`data-islands-caret-active` 登记进门禁的自身属性白名单。
+
 ## 1.1.2 — 2026-11-15
 
 ### 修复

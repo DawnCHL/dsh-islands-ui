@@ -11,11 +11,22 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 | 文件 | 作用 |
 |---|---|
 | `src/host/runtime.js` | 契约字面量、本地名提取、区域/部件表、遍历器 |
+| `src/host/caret.js` | 平滑输入光标控制器；只读 composer 契约，不读模板内部符号 |
 | `src/*.css` | 只读 `data-islands-part` 和宿主契约 |
 | `src/60-peers.css` | 第三方插件适配，允许 `[class*=...]`，核心样式不读 |
+| `src/31-caret.css` | 发送按钮强调色与光标绘制样式，读 `composer-primary` 部件 |
 | `scripts/check-css.mjs` | 选择器门禁：作用域、部件名、属性白名单、禁止哈希类名/子串匹配 |
 | `scripts/check-parts.mjs` | 表完整性：定义了没读、读了没定义、本地名格式 |
 | `test/host-runtime.test.mjs` | 本地名提取和表的单元测试 |
+
+## 输入光标
+
+平滑光标是唯一按「功能」拆出去的模块，因为它是唯一会逐帧读 DOM 几何的逻辑，也是唯一需要判断「composer 结构是否还匹配」的地方。
+
+- 依赖的宿主契约：`[data-composer-input]`（可编辑面）、`[data-input-scroll]`（滚动容器）、`[data-composer-card]`（外来光标检测的作用域）、`[data-composer-composing]` / `[data-composer-chip-selected]`（回退状态）。
+- 自身标记：`data-islands-smooth-caret`（body，覆盖光标生效）、`data-islands-caret-active`（当前正在绘制的输入框）。
+- 兼容判断只看钩子与外来光标：结构化探测失败 → `missing`，检测到其他光标插件 → `yielded`，两者都只关闭平滑光标本身，不影响皮肤。
+- 不按版本号判断：`src/host/runtime.js` 的契约表就是唯一的版本判断依据。
 
 ## 运行时
 

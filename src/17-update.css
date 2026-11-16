@@ -17,12 +17,17 @@ body[data-islands-ui] [data-islands-part~="update-badge"] {
 }
 
 body[data-islands-ui] {
-  --isl-update-bg: #4176e6;
-  --isl-update-bg-hover: #3264d4;
+  /* The update entry is an accent surface like the send button and the caret:
+     it reads the business token, which the skin remaps to the user's accent.
+     Deriving the hover shade here keeps the two in step — a separate literal
+     would stay brand blue while everything else moved. */
+  --isl-update-bg: var(--dsw-alias-state-business-primary);
+  --isl-update-bg-hover: color-mix(in srgb, var(--isl-update-bg) 88%, #111214);
   --isl-update-danger: #d93a40;
 }
 
 body[data-islands-ui][data-ds-dark-theme] {
+  --isl-update-bg-hover: color-mix(in srgb, var(--isl-update-bg) 88%, #fff);
   --isl-update-danger: #ff6369;
 }
 
@@ -74,8 +79,20 @@ body[data-islands-ui] .isl-updateButton:focus-visible {
   outline-offset: 2px;
 }
 
-body[data-islands-ui] .isl-updateButton.is-pending {
-  opacity: 0.82;
+/* The click guard between pressing the entry and the update panel opening.
+   It must not fade the element: `opacity` lightened the surface towards the
+   canvas while the coloured shadow stayed visible under it, so the entry read
+   as a pale disc floating on a shadow. Keep the surface saturated, drop the
+   lift and soften the shadow — and cover the hover state, which is still in
+   force while the pointer rests on the button. */
+body[data-islands-ui] .isl-updateButton.is-pending,
+body[data-islands-ui] .isl-updateButton.is-pending.is-clickable:hover {
+  background: var(--isl-update-bg-hover);
+  transform: none;
+  cursor: default;
+  box-shadow:
+    0 1px 3px -1px color-mix(in srgb, var(--isl-update-bg) 30%, transparent),
+    0 3px 8px -6px color-mix(in srgb, var(--isl-update-bg) 45%, transparent);
 }
 
 /* Busy phases keep the circle but let the matrix carry the state. */

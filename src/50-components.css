@@ -42,6 +42,18 @@ body[data-islands-ui] .isl-prefRow:last-child,
   line-height: 18px;
 }
 
+/* Inline compatibility hint on a preference row (never a global notice). */
+.isl-prefWarn {
+  margin-top: 2px;
+  color: #a86b00;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+body[data-ds-dark-theme] .isl-prefWarn {
+  color: #f0c274;
+}
+
 /* ---- Switch -------------------------------------------------------------- */
 .isl-switch {
   position: relative;

@@ -80,6 +80,27 @@ body[data-islands-ui] [data-sidebar-mask] {
   backdrop-filter: var(--dsw-mask-blur);
 }
 
+/* A fullscreen right pane is still mounted inside the frame's right track and
+   positioned with `right: 0`. While that track is zero-width the pane covers
+   the window almost by accident; as soon as the track has any width the pane is
+   pushed off-screen, so the window shows plain canvas while the toggle still
+   reports the pane as open. A fullscreen pane owns the window, so pin it to the
+   viewport and stop letting the grid decide where it lands. */
+body[data-islands-ui] [data-sidebar-right-panel][data-sidebar-right-panel='fullscreen'][data-sidebar-right-open] {
+  position: fixed;
+  inset:
+    calc(var(--isl-chrome-top) + var(--isl-topbar-height) + var(--isl-gap))
+    0
+    var(--isl-gap)
+    0;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  /* Above the drawer mask (70), the drawer (71) and the shell overlay (72). */
+  z-index: 78;
+}
+
 /* The shell overlay layer is where the rail and window top bar live. In
    drawer mode it must paint above the drawer mask (70) and the drawer (71),
    otherwise the persistent rail disappears under the open workspace drawer. */

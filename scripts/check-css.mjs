@@ -22,6 +22,8 @@ const ownAttributes = new Set([
   'data-islands-workspace-collapsed',
   'data-islands-accent',
   'data-islands-animating',
+  'data-islands-smooth-caret',
+  'data-islands-caret-active',
   'data-open',
   'data-scrolled',
   'data-clipped',

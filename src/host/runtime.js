@@ -73,6 +73,10 @@ export const HOST_ATTRIBUTES = Object.freeze([
   'data-composer-seat',
   'data-composer-overlay',
   'data-composer-dock',
+  'data-composer-input',
+  'data-composer-composing',
+  'data-composer-chip-selected',
+  'data-input-scroll',
   'data-rightbar-col',
   'data-sidebar-right-panel',
   'data-sidebar-right-open',
@@ -184,6 +188,9 @@ export const HERO_PARTS = {
 export const COMPOSER_PARTS = {
   cardWorkspaceTrigger: 'composer-card-workspace-trigger',
   notice: 'composer-notice',
+  // The send circle. Its stock fill is an info token the accent does not
+  // remap, so the skin reaches it through a part instead of its class name.
+  primary: 'composer-primary',
 };
 
 /** The conversation body wrapper, which embeds a second conversation. */

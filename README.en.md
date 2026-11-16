@@ -61,7 +61,7 @@ Refresh after uninstalling. Your skin preferences stay on this machine and are r
 | :---: | --- | --- |
 | 🏝 | **Floating islands** | Canvas, conversation, workspace, right sidebar and bottom panel become separate rounded surfaces; flat, no drop shadows, separated by color and a 1px hairline |
 | 🧭 | **Persistent rail** | Workspace plus every plugin launcher, shown inline; the home button is a pure conversation / workspace-drawer trigger with no selected state (subtle hover and a translucent click ripple); click a panel to open it, drag to reorder with a floating preview, right-click to show or hide |
-| ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color and follow-theme |
+| ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color, follow-theme and the smooth input caret |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
 | 🌙 | **Dark mode** | Full dark palette: near-black canvas, dark islands, translucent interaction layers |
 | 🔄 | **Desktop update entry** | Pinned above the settings gear; distinct states for available, downloading, verifying, installing and failure, with accent-colored 3×3 dot-matrix loaders |
@@ -80,6 +80,7 @@ Everything happens in the interface layer. Rail ordering, the pinned shelf and t
 | Spacing | 5px between every island, including the bottom panel |
 | Top bar | 40px window strip hosting the conversation tools and the right-panel toggle; macOS clears the traffic lights, Linux starts at 8px below the native title bar. Windows renders no island top bar: the caption row keeps the native sidebar toggle and the right-hand tools stay in the conversation header |
 | Accent | Brand blue by default; purple / green / orange / pink / red presets or any custom color |
+| Caret | The conversation composer uses a smooth caret: it glides along a line, jumps to the next one, and follows the accent color; it can be turned off in settings |
 
 ---
 
@@ -121,7 +122,7 @@ When reporting an issue, please include your OS, DSH version, window size and a 
 
 The skin only redraws the interface. It does not modify or upload your sessions, settings or plugin data.
 
-The master switch, accent, pinned-group state and rail order are stored in your browser's local storage. Turning the skin off keeps these preferences; to reset them, restore the defaults in Settings or clear the site's local storage.
+The master switch, accent, smooth-caret switch, pinned-group state and rail order are stored in your browser's local storage. Turning the skin off keeps these preferences; to reset them, restore the defaults in Settings or clear the site's local storage.
 
 ---
 
@@ -143,7 +144,7 @@ Check that the plugin is enabled in the current DSH profile and refresh (`⌘R` 
 
 **Does it touch my sessions or settings?**
 
-No. The skin only redraws the interface; the master switch, accent, pinned-group state and rail order live in your browser's local storage.
+No. The skin only redraws the interface; the master switch, accent, smooth-caret switch, pinned-group state and rail order live in your browser's local storage.
 
 **How do I fully reset the skin?**
 
