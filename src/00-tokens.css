@@ -32,6 +32,10 @@ body[data-islands-ui] {
   --isl-chrome-top: 0px;
   --isl-rail-collapsed-width: 56px;
   --isl-rail-width: 48px;
+  /* Rail foot band: the space between the measured foot stack and the gear,
+     and between the gear and the update entry. */
+  --isl-foot-gap: 20px;
+  --isl-update-gap: 8px;
   /* Elevation: a hairline ring plus one soft, deep shadow. */
   --isl-shadow-island: none;
   --isl-shadow-float:

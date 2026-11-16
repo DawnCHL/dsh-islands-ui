@@ -2,9 +2,9 @@
  * Browser half of the Islands UI skin.
  *
  * Publishes the stylesheet, marks the host parts, and registers the skin's own
- * chrome. The stylesheet lives in src/*.css, the host bridge in
- * src/host/runtime.js, and build.mjs inlines both — the module loader has no
- * filesystem access, so the built client.js is self-contained.
+ * chrome. The stylesheet lives in src/*.css, the host bridge and the two DOM
+ * controllers in src/host/, and build.mjs inlines all of them — the module
+ * loader has no filesystem access, so the built client.js is self-contained.
  */
 window.__ModuleLoader__.load({
   id: 'dsh-islands-ui',
@@ -14,6 +14,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement;
     /*__HOST_RUNTIME__*/
     /*__CARET_MODULE__*/
+    /*__FOOT_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -2761,6 +2762,11 @@ window.__ModuleLoader__.load({
         // Everything below turns the chrome on, so it runs only after the gate
         // has confirmed this build still matches the stylesheet.
         const registerSkinChrome = (ctx) => {
+          // The rail's fixed anchors read the measured foot stack. Install
+          // before the chrome that uses it so the first paint already has the
+          // value; the stylesheet's 36px fallback covers a missing seat.
+          ctx.effect(() => installFootMeasure(), 'dsh-islands-ui: rail foot measure');
+
           // The caret controller only runs with the chrome on: it paints into
           // the composer and reads the skin's body attribute on every frame.
           ctx.effect(() => {

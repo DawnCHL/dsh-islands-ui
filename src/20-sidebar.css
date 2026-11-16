@@ -235,11 +235,91 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   background: var(--isl-hover);
 }
 
-/* Footer actions contributed next to Settings (account launcher, etc.). */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] button {
-  width: 36px;
-  height: 36px;
+/* Footer actions contributed next to Settings (account launcher, etc.).
+   The host still reports `wide` to `sidebar.footer.action` registrants because
+   the sidebar is expanded, so a wide-aware plugin renders a full-width,
+   labelled row here while the skin only has a 48px rail. The skin owns this
+   box: every top-level guest control becomes a 36px tile, and the text label
+   of an icon-bearing control moves to the accessibility tree (the plugin's
+   own title/aria-label keeps the tooltip). The pixel rules are `!important`
+   because the plugin styles are inline; this is the one seat where the skin
+   must win the box outright. Visibility stays the plugin's: `display` is not
+   forced, so a control the plugin hides stays hidden.
+
+   The host wraps every slot outlet in `<div data-slot="<key>"
+   style="display: contents">`. The wrapper is layout-neutral but still in the
+   selector tree, so the guest is the wrapper's child, not a direct child of
+   `footer-actions`. Each rule names both the anchor path and, as a fallback
+   for a shell without the anchor, the direct child. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
+  box-sizing: border-box !important;
+  flex: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  width: 36px !important;
+  min-width: 0 !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 0 !important;
+  max-height: 36px !important;
+  margin: 3px 0 !important;
+  padding: 0 !important;
+  overflow: clip !important;
+  white-space: nowrap !important;
   border-radius: var(--isl-radius-md);
+  cursor: pointer;
+  transition: background-color 0.12s var(--ds-ease-in-out);
+}
+
+/* Icon-bearing controls: hide only the bare text span (an icon wrapper may
+   itself be a span and must stay visible). This is a visual hide rather than
+   `display: none`, so a plugin without an aria-label keeps its accessible
+   name. Controls with no icon keep their label and are clipped instead. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)),
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* Guest tiles borrow the rail's interaction states. The background needs
+   `!important` because plugins commonly write `background: transparent`
+   inline, which would otherwise leave the tile with no feedback. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):hover,
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):hover {
+  background: var(--isl-hover) !important;
+}
+
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):focus-visible,
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) !important;
+  outline-offset: 1px;
+}
+
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-pressed='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-pressed='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
+  background: var(--isl-active) !important;
+}
+
+/* A control that expands a panel in place must not clip that panel. The
+   label is clipped by its own rule, so only the panel benefits. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
+  overflow: visible !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
+  body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
+    transition: none;
+  }
 }
 
 /* ---- Collapsed rail ------------------------------------------------------ */
@@ -363,6 +443,50 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   clip: rect(0 0 0 0);
   white-space: nowrap;
   overflow: hidden;
+}
+
+/* ---- Guests beside the account launcher ----------------------------------
+   Plugins can insert their own entry next to the account launcher (a plugin
+   entry, for example) through the host's settings row. That row is skin-owned
+   chrome too: a 48px rail cannot hold the account plus another action side by
+   side, and the host's wide layout assumes it can. When a guest anchor is
+   present the row stacks, and the guest becomes the same 36px tile as the
+   rail. `order: -1` keeps the guest above the account, matching where the
+   host's rail puts a footer action. The foot measure carries the taller row
+   into the gear and the rail reserve. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"]:has(> a) {
+  flex-direction: column;
+  width: auto;
+  height: auto;
+  gap: 2px;
+}
+
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"] > a {
+  order: -1;
+  flex: none;
+  box-sizing: border-box !important;
+  width: 36px !important;
+  min-width: 0 !important;
+  max-width: 36px !important;
+  height: 36px !important;
+  min-height: 0 !important;
+  max-height: 36px !important;
+  margin: 3px 0 !important;
+  padding: 0 !important;
+  overflow: clip !important;
+  white-space: nowrap !important;
+  border-radius: var(--isl-radius-md);
+}
+
+/* An icon-bearing guest keeps its icon and moves any text to the
+   accessibility tree, the same way a footer guest does. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"] > a:has(svg, img) > span:not(:has(*)) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
 }
 
 /* ---- Independent workspace collapse ------------------------------------- */

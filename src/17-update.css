@@ -34,7 +34,10 @@ body[data-islands-ui][data-ds-dark-theme] {
 body[data-islands-ui] .isl-updateButton {
   position: fixed;
   left: calc(var(--isl-gap) + (var(--isl-rail-width) - 36px) / 2);
-  bottom: calc(56px + 36px + 8px);
+  /* Stacked above the gear, so it follows the measured foot stack too. */
+  bottom: calc(
+    var(--isl-foot-height, 36px) + var(--isl-foot-gap) + 36px + var(--isl-update-gap)
+  );
   z-index: 26;
   box-sizing: border-box;
   display: grid;

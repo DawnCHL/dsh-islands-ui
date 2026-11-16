@@ -2,9 +2,9 @@
  * Build the self-contained browser module.
  *
  * The module loader cannot import package files, so every src/*.css file is
- * concatenated (in filename order) and inlined into client.js. The host bridge
- * in src/host/runtime.js is inlined the same way, with its ESM `export` tokens
- * stripped; the same file is imported by the build checks and the tests.
+ * concatenated (in filename order) and inlined into client.js. The host
+ * modules in src/host/*.js are inlined the same way, with their ESM `export`
+ * tokens stripped; runtime.js is also imported by the build checks and tests.
  *
  * Run with `node build.mjs` after editing the styles or the host table.
  */
@@ -37,6 +37,11 @@ const hostRuntime = runtime.replace(/^export\s+/gmu, '').trim();
 const caret = await readFile(join(srcDir, 'host', 'caret.js'), 'utf8');
 const caretModule = caret.replace(/^export\s+/gmu, '').trim();
 
+// The rail foot measure is another DOM controller with no template internals:
+// it publishes the measured foot height the fixed rail anchors read.
+const foot = await readFile(join(srcDir, 'host', 'foot.js'), 'utf8');
+const footModule = foot.replace(/^export\s+/gmu, '').trim();
+
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 if (!template.includes('/*__HOST_RUNTIME__*/')) {
@@ -45,11 +50,15 @@ if (!template.includes('/*__HOST_RUNTIME__*/')) {
 if (!template.includes('/*__CARET_MODULE__*/')) {
   throw new Error('client.template.js lost its caret placeholder');
 }
+if (!template.includes('/*__FOOT_MODULE__*/')) {
+  throw new Error('client.template.js lost its foot-measure placeholder');
+}
 const built = template
   .replace('/*__HOST_RUNTIME__*/', () => hostRuntime)
   .replace('/*__CARET_MODULE__*/', () => caretModule)
+  .replace('/*__FOOT_MODULE__*/', () => footModule)
   .replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
-const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length} bytes of CSS and host bridge`;
+const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length} bytes of CSS, host bridge and controllers`;
 
 if (process.argv.includes('--check')) {
   let current = '';
