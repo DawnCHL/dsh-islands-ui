@@ -802,53 +802,143 @@ window.__ModuleLoader__.load({
       return h(PinGlyph);
     }
 
-    function revealPinnedSession(sessionId, title) {
-      const projectRows = () => [...document.querySelectorAll(HOST.WORKSPACE_ROW)];
-      const stateOf = (row) =>
-        row.getAttribute('aria-expanded') ??
-        row.querySelector('[aria-expanded]')?.getAttribute('aria-expanded');
-      const expanded = (row) => stateOf(row) === 'true';
-      const toggle = (row) => {
-        const chevron = row.querySelector('[aria-expanded]');
-        if (chevron instanceof HTMLElement) chevron.click();
-        else row.click();
-      };
+    /** A second click while the list is still opening must not race the first. */
+    let locating = false;
 
-      // Expand every workspace briefly so the target session exists in the DOM.
-      for (const row of projectRows()) {
-        if (!expanded(row)) toggle(row);
-      }
+    /**
+     * Escape a value for a quoted attribute selector. Row keys are ids, but a
+     * session id never gets concatenated into a selector without this.
+     */
+    function rowKeyValue(value) {
+      return String(value).replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+    }
 
-      window.setTimeout(() => {
-        const candidates = [...document.querySelectorAll(HOST.SESSION_ROW)].filter((row) =>
-          (row.textContent ?? '').includes(title),
-        );
-        if (candidates.length === 0) return;
-        const row = candidates[0];
+    /** One paint, with a timer fallback for a background window. */
+    function nextFrame() {
+      return new Promise((resolve) => {
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+        requestAnimationFrame(done);
+        window.setTimeout(done, 120);
+      });
+    }
 
-        // The owner is the nearest preceding Workspace row; nested ancestors stay open.
-        let owner = null;
-        for (const project of projectRows()) {
-          if ((project.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0) owner = project;
+    /**
+     * Reveal a pinned session in the workspace list.
+     *
+     * The Workspace row is the host's `treeitem` and toggles on a plain click,
+     * but its descendants also carry `aria-expanded`: the "..." context-menu
+     * trigger and the overflow button. Expanding through a descendant lookup
+     * therefore clicked the menu trigger, opened the Workspace menu at the
+     * viewport origin (the row actions are hidden until hover, so the trigger
+     * has no rect) and left the group collapsed. Match the session by its row
+     * key instead of by title, and toggle the row itself.
+     */
+    async function revealPinnedSession(sessionId, workspaceId) {
+      if (locating) return;
+      locating = true;
+      try {
+        const sessionSelector = `[data-row-key="session:${rowKeyValue(sessionId)}"]`;
+        const findSession = () => document.querySelector(sessionSelector);
+        const projectRows = () => [...document.querySelectorAll(HOST.WORKSPACE_ROW)];
+        const expanded = (row) => row.getAttribute('aria-expanded') === 'true';
+        const rowKey = (row) => row.getAttribute('data-row-key');
+        const findWorkspace = (id) =>
+          document.querySelector(`[data-row-key="workspace:${rowKeyValue(id)}"]`);
+        // HoverCard wraps both Workspace and session anchors in a span, so a
+        // row's parent is not its group section. A section is the child of the
+        // tree itself or of an enclosing role=group.
+        const sectionOf = (row) => {
+          let node = row.parentElement;
+          while (node !== null) {
+            const parent = node.parentElement;
+            if (parent === null) return null;
+            const role = parent.getAttribute('role');
+            if (role === 'group' || role === 'tree') return node;
+            node = parent;
+          }
+          return null;
+        };
+
+        let row = findSession();
+        const reopened = new Set();
+
+        // Expand collapsed Workspaces until the target mounts. A single pass
+        // is not enough: opening a nested Workspace mounts its children
+        // collapsed, and those children need their own click.
+        for (let pass = 0; row === null && pass < 16; pass += 1) {
+          const collapsed = projectRows().filter((project) => !expanded(project));
+          if (collapsed.length === 0) break;
+          for (const project of collapsed) {
+            if (!project.isConnected || expanded(project)) continue;
+            project.click();
+            reopened.add(rowKey(project));
+          }
+          await nextFrame();
+          row = findSession();
         }
 
-        for (const project of projectRows()) {
-          const keep = project === owner || project.contains(owner);
-          if (keep) {
-            if (!expanded(project)) toggle(project);
-          } else if (expanded(project)) {
-            toggle(project);
+        // The host only paints a small window of sessions per group. The
+        // target is normally pinned to the front, but when it sits behind the
+        // overflow button, raise that group's watermark until the row exists.
+        for (let step = 0; row === null && step < 10; step += 1) {
+          const owner = workspaceId === undefined ? null : findWorkspace(workspaceId);
+          const section = owner === null ? null : sectionOf(owner);
+          const overflow =
+            section?.querySelector(':scope > [data-row-key^="overflow:"]') ??
+            (workspaceId === undefined
+              ? document.querySelector('[data-row-key="overflow:"]')
+              : null);
+          if (!(overflow instanceof HTMLElement)) break;
+          overflow.click();
+          await nextFrame();
+          row = findSession();
+        }
+
+        // The owning Workspace is the project row in the same group section;
+        // nested ancestors are the project rows above each enclosing
+        // role=group. Keep them open after undoing the temporary expansion.
+        const keep = new Set();
+        if (row !== null) {
+          let section = sectionOf(row);
+          let owner = section?.querySelector(HOST.WORKSPACE_ROW) ?? null;
+          while (section !== null && owner !== null) {
+            keep.add(rowKey(owner));
+            const group = section.parentElement;
+            if (!(group instanceof HTMLElement) || group.getAttribute('role') !== 'group') break;
+            section = group.parentElement;
+            owner = section instanceof HTMLElement ? section.querySelector(HOST.WORKSPACE_ROW) : null;
           }
         }
 
-        window.setTimeout(() => {
-          row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
-          row.focus({ preventScroll: true });
-          row.classList.add('isl-located');
-          window.setTimeout(() => row.classList.remove('isl-located'), 1400);
-        }, 140);
-      }, 180);
+        // Restore the groups this run opened only to make the target
+        // reachable. Walk deepest first so a child's expansion state is
+        // reverted before its parent unmounts it.
+        for (const key of [...reopened].reverse()) {
+          if (keep.has(key)) continue;
+          const project = projectRows().find((candidate) => rowKey(candidate) === key);
+          if (project !== undefined && project.isConnected && expanded(project)) project.click();
+        }
+
+        if (row === null) return;
+        await nextFrame();
+
+        const target = findSession();
+        if (!(target instanceof HTMLElement)) return;
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+        target.classList.add('isl-located');
+        window.setTimeout(() => target.classList.remove('isl-located'), 1400);
+      } catch {
+        /* The sidebar belongs to the host; a failed locate leaves it as it is. */
+      } finally {
+        locating = false;
+      }
     }
 
     function PinGlyph() {
@@ -2025,7 +2115,7 @@ window.__ModuleLoader__.load({
     }
 
     /** One pinned row: hover reveals unpin + locate, and a clipped title marquees. */
-    function PinnedRow({ session, copy, pinIcon }) {
+    function PinnedRow({ session, workspaceId, copy, pinIcon }) {
       const titleRef = React.useRef(null);
       const frameRef = React.useRef(0);
       const revealingRef = React.useRef(false);
@@ -2119,7 +2209,10 @@ window.__ModuleLoader__.load({
             'aria-label': copy.locate,
             onClick: (event) => {
               event.stopPropagation();
-              revealPinnedSession(id, title);
+              // Locating also makes the session current. Open first so the
+              // switch still happens when the list cannot show the row.
+              uiWorkspaceService?.openSession(id);
+              revealPinnedSession(id, workspaceId);
             },
           },
           h(LocateGlyph),
@@ -2135,6 +2228,7 @@ window.__ModuleLoader__.load({
     function IslandsPinnedSection({ useWorkspaces, useSessions }) {
       const pinnedIds = useWorkspaces((state) => state.pinnedSessionIds ?? []);
       const sessions = useSessions((state) => state.byId ?? {});
+      const workspaceItems = useWorkspaces((state) => state.items ?? []);
       const [host, setHost] = React.useState(null);
       const [collapsed, setCollapsed] = React.useState(() => {
         try {
@@ -2215,14 +2309,19 @@ window.__ModuleLoader__.load({
             : h(
                 'div',
                 { className: 'isl-pinnedList' },
-                rows.map((session) =>
-                  h(PinnedRow, {
-                    key: session.id ?? session.sessionId,
+                rows.map((session) => {
+                  const id = session.id ?? session.sessionId;
+                  const owner = workspaceItems.find(
+                    (item) => Array.isArray(item?.sessionIds) && item.sessionIds.includes(id),
+                  );
+                  return h(PinnedRow, {
+                    key: id,
                     session,
+                    workspaceId: owner?.workspaceId,
                     copy,
                     pinIcon,
-                  }),
-                ),
+                  });
+                }),
               ),
         ),
         host,
