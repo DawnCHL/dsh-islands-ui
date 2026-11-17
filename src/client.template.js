@@ -15,6 +15,7 @@ window.__ModuleLoader__.load({
     /*__HOST_RUNTIME__*/
     /*__CARET_MODULE__*/
     /*__FOOT_MODULE__*/
+    /*__FOOTER_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -2766,6 +2767,11 @@ window.__ModuleLoader__.load({
           // before the chrome that uses it so the first paint already has the
           // value; the stylesheet's 36px fallback covers a missing seat.
           ctx.effect(() => installFootMeasure(), 'dsh-islands-ui: rail foot measure');
+
+          // The workspace footer panel owns collapse, the remembered height
+          // and the drag handle. It only runs while the chrome is on, because
+          // it writes the skin's body attributes.
+          ctx.effect(() => installFooterPanel(), 'dsh-islands-ui: workspace footer panel');
 
           // The caret controller only runs with the chrome on: it paints into
           // the composer and reads the skin's body attribute on every frame.

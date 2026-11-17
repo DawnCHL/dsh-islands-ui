@@ -14,7 +14,7 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"] {
 body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) {
   display: grid;
   grid-template-columns: var(--isl-rail-width) minmax(0, 1fr);
-  grid-template-rows: var(--isl-gap) auto minmax(0, 1fr) auto;
+  grid-template-rows: var(--isl-gap) auto minmax(0, 1fr) auto auto;
   column-gap: var(--isl-gap);
   padding: 0;
   background: transparent;
@@ -152,7 +152,7 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
 body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="region-area"] {
   grid-area: 3 / 2 / 5 / 3;
   margin: 0;
-  padding: 0 4px 6px;
+  padding: 0 4px 0;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -190,15 +190,22 @@ body[data-islands-ui] [data-row-key^="workspace:"] {
   padding-inline: 8px;
 }
 
-/* ---- Rail foot: settings gear ------------------------------------------ */
+/* ---- Rail foot: settings gear ------------------------------------------
+   `foot-area` is the host's wrapper for `footer-actions` + `settings-area`.
+   In the expanded layout the two children take different seats, so the
+   wrapper becomes layout-neutral: settings keeps the rail's bottom-left
+   corner and footer actions take the workspace column's bottom row. */
 body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="foot-area"] {
-  grid-area: 4 / 1;
-  align-items: center;
-  margin-top: 6px;
+  display: contents;
 }
 
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"],
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] {
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] {
+  /* Spans the settings row and the footer row, bottom-aligned, so the account
+     stays at the rail's bottom edge whatever height the footer takes. */
+  grid-area: 4 / 1 / 6 / 2;
+  align-self: end;
+  display: flex;
+  flex-direction: column;
   width: auto;
   align-items: center;
   justify-content: center;
@@ -235,24 +242,201 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   background: var(--isl-hover);
 }
 
-/* Footer actions contributed next to Settings (account launcher, etc.).
-   The host still reports `wide` to `sidebar.footer.action` registrants because
-   the sidebar is expanded, so a wide-aware plugin renders a full-width,
-   labelled row here while the skin only has a 48px rail. The skin owns this
-   box: every top-level guest control becomes a 36px tile, and the text label
-   of an icon-bearing control moves to the accessibility tree (the plugin's
-   own title/aria-label keeps the tooltip). The pixel rules are `!important`
-   because the plugin styles are inline; this is the one seat where the skin
-   must win the box outright. Visibility stays the plugin's: `display` is not
-   forced, so a control the plugin hides stays hidden.
+/* ---- Workspace footer: plugin footer actions ----------------------------
+   `sidebar.footer.action` is a WIDE seat at the bottom of the workspace
+   island, not a 48px rail tile. The host already reports `wide` because the
+   sidebar is expanded; giving the seat the workspace column's width makes that
+   contract true again, so wide-aware plugins (cost meters, gateways) render
+   their normal layout instead of overflowing a narrow rail.
 
-   The host wraps every slot outlet in `<div data-slot="<key>"
-   style="display: contents">`. The wrapper is layout-neutral but still in the
-   selector tree, so the guest is the wrapper's child, not a direct child of
-   `footer-actions`. Each rule names both the anchor path and, as a fallback
-   for a shell without the anchor, the direct child. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
+   The skin owns the CONTAINER, not the guest: it stacks the footer under the
+   workspace, caps/collapses it, lets it scroll, and remembers the height.
+   Guest geometry is not rewritten here; the 36px-tile normalization now lives
+   on the collapsed rail below. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] {
+  grid-area: 5 / 2;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  /* The top gap is the click bar's seat. No border: the gap is the separator. */
+  padding: 20px 8px 8px;
+  min-height: min(200px, var(--isl-footer-max, 800px));
+  height: var(--isl-footer-height, auto);
+  max-height: var(--isl-footer-max, 800px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* The click bar is the skin's affordance for collapse/expand and the opaque
+   mask over the footer's top gap. It is portalled to <body> so React never
+   reconciles it away and the footer's own scroll clip cannot cut it. */
+.isl-footerHandle {
+  position: fixed;
+  z-index: 30;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: auto;
+  min-width: 0;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--isl-surface, #fff);
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 0.12s var(--ds-ease-in-out);
+}
+
+/* Rounded full-row highlight drawn above the opaque mask. */
+.isl-footerHandle::before {
+  content: '';
+  position: absolute;
+  inset: 1px 0;
+  border-radius: var(--isl-radius-sm);
+  background: var(--isl-hover);
+  opacity: 0;
+  transition: opacity 0.25s var(--ds-ease-in-out);
+}
+
+.isl-footerHandle:hover::before,
+.isl-footerHandle.is-dragging::before {
+  opacity: 1;
+}
+
+/* The resize strip sits 5px ABOVE the bar, outside the button's hit area, so
+   the click target and the height-drag target never overlap. */
+.isl-footerResize {
+  position: fixed;
+  z-index: 30;
+  height: 5px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.isl-footerResize[hidden] {
+  display: none;
+}
+
+/* Accent bar while the resize strip is hovered or dragged: the trigger area
+   itself lights up, not just the row below it. */
+.isl-footerResize::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--dsw-alias-state-business-primary);
+  opacity: 0;
+  transition: opacity 0.12s var(--ds-ease-in-out);
+}
+
+.isl-footerResize:hover::before,
+.isl-footerResize.is-dragging::before {
+  opacity: 1;
+}
+
+.isl-footerHandle svg {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.15s var(--ds-ease-in-out);
+}
+
+.isl-footerHandle[hidden] {
+  display: none;
+}
+
+.isl-footerHandle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.isl-footerHandle:hover,
+.isl-footerHandle:focus-visible {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.isl-footerHandle:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-footerHandle,
+  .isl-footerHandle::before,
+  .isl-footerHandle svg {
+    transition: none;
+  }
+}
+
+/* Narrow desktop: the workspace is a drawer (mask 70, panel 71, rail 72).
+   The body-level bar and resize strip must paint above it; the controller
+   repositions them on drawer transitions. */
+@media (width <= 767px) {
+  .isl-footerHandle,
+  .isl-footerResize {
+    z-index: 72;
+  }
+}
+
+/* Collapsed: the footer keeps only the handle strip; the workspace gets the
+   space back. The slot content (not the handle, which lives on <body>) is what
+   disappears. */
+body[data-islands-ui][data-islands-footer-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] {
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
+  /* Keep the same horizontal inset as the expanded footer so the bar does
+     not jump wider when the panel collapses. */
+  padding: 0 8px;
+  overflow: hidden;
+}
+
+/* The collapsed bar is the island's bottom cap: follow the card's bottom
+   rounding instead of covering it with square corners. */
+body[data-islands-ui][data-islands-footer-collapsed] .isl-footerHandle {
+  border-bottom-left-radius: calc(var(--isl-radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--isl-radius-lg) - 1px);
+}
+
+body[data-islands-ui][data-islands-footer-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] {
+  /* The host writes `style="display: contents"` on the outlet wrapper, so the
+     collapsed hide must beat the inline declaration. */
+  display: none !important;
+}
+
+/* No guest content: hide the seat entirely so the workspace keeps full
+   height; the controller owns the `data-islands-footer-empty` marker. */
+body[data-islands-ui][data-islands-footer-empty] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] {
+  display: none;
+}
+
+/* ---- Collapsed rail: guest footer controls ------------------------------
+   In the 56px rail the host reports a narrow foot of additive actions, so the
+   1.2.2 normalization stays here only: every top-level guest control becomes a
+   36px tile and an icon-bearing control's text label moves to the accessible
+   tree. The expanded footer above is a wide seat and must NOT inherit these
+   pixel rules. The host wraps every slot outlet in a `display: contents`
+   `[data-slot]` anchor, so each rule names the anchor path and the direct
+   child fallback. */
+
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
   box-sizing: border-box !important;
   flex: none !important;
   align-items: center !important;
@@ -277,8 +461,8 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
    itself be a span and must stay visible). This is a visual hide rather than
    `display: none`, so a plugin without an aria-label keeps its accessible
    name. Controls with no icon keep their label and are clipped instead. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)),
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)) {
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)),
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*)) {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;
@@ -290,34 +474,34 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
 /* Guest tiles borrow the rail's interaction states. The background needs
    `!important` because plugins commonly write `background: transparent`
    inline, which would otherwise leave the tile with no feedback. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):hover,
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):hover {
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):hover,
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):hover {
   background: var(--isl-hover) !important;
 }
 
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):focus-visible,
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):focus-visible {
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):focus-visible,
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button']):focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)) !important;
   outline-offset: 1px;
 }
 
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-pressed='true'],
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-pressed='true'],
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-pressed='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-pressed='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
   background: var(--isl-active) !important;
 }
 
 /* A control that expands a panel in place must not clip that panel. The
    label is clipped by its own rule, so only the panel benefits. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])[aria-expanded='true'],
+body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button'])[aria-expanded='true'] {
   overflow: visible !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
-  body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
+  body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']),
+  body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > :is(button, a, [role='button']) {
     transition: none;
   }
 }
@@ -409,6 +593,12 @@ body[data-islands-ui] [data-islands-part~="layout-frame"][data-sidebar-drawer] [
   margin-left: var(--isl-rail-width);
 }
 
+/* The drawer card keeps a canvas gap at the bottom; the footer row must end at
+   the card's bottom, not below it. */
+body[data-islands-ui] [data-islands-part~="layout-frame"][data-sidebar-drawer] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] {
+  margin-bottom: var(--isl-gap);
+}
+
 /* ---- Account launcher (settings.launcher) --------------------------------
    In this build the sidebar foot is the account menu rather than the bare
    settings gear, so the same rail geometry applies to its trigger. The
@@ -495,6 +685,7 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="new-session-row"],
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="new-session"],
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="region-area"],
+body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"],
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"])::after {
   display: none !important;
 }

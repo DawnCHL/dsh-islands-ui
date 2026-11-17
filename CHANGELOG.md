@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.2.3 — 2026-11-17
+
+### 界面
+
+- `sidebar.footer.action` 从 48px 轨道挪到工作区岛底部：工作区列里工作区占 3–4 行、footer 独占第 5 行（`foot-area` 展开态 `display: contents`，`settings-area` 仍留轨道底部）。宽栏插件（如 dsh-cost-meter）不再被塞进窄轨道，`wide` 契约与座位宽度重新一致。
+- footer 容器由皮肤负责：默认自适应内容、`max-height: min(320px, 侧栏高 45%)`、拖动接缝调整高度并写入 `localStorage`、底部 handle 折叠/展开、内容超出时内部滚动；空态自动隐藏。默认展开，折叠状态和高度在下次打开窗口时恢复。
+- 展开态的 36px tile 归一化移除，仅保留在 `sidebar-collapsed` 轨道。
+- 修复重启后 `sidebar.footer.action` 消失：footer 空态改为按槽位子项是否存在判断。插件异步挂载时，座位可能已经被空态 `display: none`，旧实现的“量高度”判断会一直读到 0，导致 footer 永远不再出现。
+- footer 细节：去掉 `footer-actions` 的 `border-top`，用 20px 顶部留白做分隔；handle 是覆盖整行留白的白底遮罩条（去掉 `box-shadow`），hover/拖动时整行圆角高亮，滚动内容不会从按钮两侧露出；工作区折叠时 footer 与 handle 一起隐藏。
+- 修复折叠后 cost-meter 线框残留：宿主 `[data-slot]` 包装层带内联 `display: contents`，折叠规则需要 `!important` 才能盖过它。
+- resize 改为 handle 上方 5px 的独立拖动条，handle 按钮本身只负责折叠/展开，两者热区不重叠；拖动条悬停/拖动时用强调色 3px 细条高亮触发区。
+- handle 的 hover 高亮改为 `opacity` 0.25s 淡入淡出，出现/消失不再突兀；`prefers-reduced-motion` 下禁用过渡。
+- handle 的 `aria-label` 跟随 `documentElement.lang`（zh / en），并加 `aria-controls` 指向 footer 容器；新增 footer 高度 `clamp` / `max` 的纯函数行为测试，tile 断言锁定 `sidebar-collapsed` 作用域。
+- `sidebar.footer.action` 最小高度 200px（拖动/记忆高度下限也是 200px）；handle 移除 `title` 原生提示，保留 `aria-label`。
+- 评审修复：窄屏抽屉下 handle/resize 升到 `z-index: 72`，并监听 `data-sidebar-drawer` / `transitionend` 重新定位；`min-height` 改为 `min(200px, max-height)`，矮窗口不再压过 45% 上限；`settings-area` 改为 flex 居中；`hasContent` 增加无 `[data-slot]` 外壳 fallback 并忽略插件 `display:none` 的占位；文档同步。
+- 折叠态 20px handle 作为岛屿底盖：水平保持与展开相同的 8px 内缩（宽度不再 211→225 跳变），仅垂直内缩 1px 让卡片底边框可见，底部圆角用内圆角；窄屏抽屉下 footer 上移 `--isl-gap`。绝对上限从 320px 提到 800px（45% 相对上限不变）。
+- 去掉 `footer-actions` 的 `scrollbar-gutter: stable`：它只在右侧预留滚动条槽，导致左右都是 8px padding 但视觉偏左；现在交给系统 overlay 滚动条。
+
+### 兼容性
+
+- 新增 `src/host/footer.js` 控制器（`build.mjs` 内联）；`src/host/foot.js` 改为测量 `settings-area`（`foot-area` 在展开态是 `display: contents`，不再有盒子）。
+- `npm run check` 增加 `check:syntax`：`client.js` 内联多个 host 模块，顶层标识符重名会让整个插件不加载（设置页也不会出现）；现在构建后先做语法门禁。
+- `docs/host-contracts.md` 更新座位契约与访客契约；`test/foot-anchors.test.mjs` 增加工作区底部座位、控制器和折叠轨道归一化的断言。
+
 ## 1.2.2 — 2026-11-16
 
 ### 修复

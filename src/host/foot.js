@@ -2,13 +2,16 @@
  * Rail foot measurement.
  *
  * The skin's rail chrome — the settings gear and the desktop update entry —
- * is fixed to the viewport, while the host's foot stack grows upward with
- * whatever `sidebar.footer.action` registrants contribute. Anchoring those
- * controls with constants assumes the foot is always one account row, so a
- * contributed button either lands under the gear or pushes the account into
- * it. This module measures the marked foot seat and publishes its height as
- * `--isl-foot-height`; the stylesheets derive every anchor from that value,
- * so one, two or any number of contributed controls stay clear.
+ * is fixed to the viewport, while the rail's remaining foot seat (settings and
+ * the account launcher) stacks upward. Anchoring those controls with constants
+ * assumes the foot is always one account row, so a taller settings row either
+ * lands under the gear or pushes the account into it. This module measures the
+ * marked settings seat and publishes its height as `--isl-foot-height`; the
+ * stylesheets derive every anchor from that value.
+ *
+ * Contributed `sidebar.footer.action` guests no longer sit in this stack: they
+ * live at the bottom of the workspace island (see `src/host/footer.js`), so
+ * the rail reserve only has to track the settings/account seat.
  *
  * The walker writes the part asynchronously and the sidebar can remount, so
  * the module watches the part attribute; box changes come from the
@@ -17,12 +20,13 @@
  * path.
  *
  * `build.mjs` inlines this file into `client.js` the same way as
- * `src/host/runtime.js` and `src/host/caret.js`, so it must stay free of
- * template internals: it may only touch the DOM and the attribute below.
+ * `src/host/runtime.js`, `src/host/caret.js` and `src/host/footer.js`, so it
+ * must stay free of template internals: it may only touch the DOM and the
+ * attribute below.
  */
 
-/** The walker's marker for the host's sidebar foot seat. */
-const FOOT_SELECTOR = '[data-islands-part~="foot-area"]';
+/** The walker's marker for the host's rail foot seat. */
+const FOOT_SELECTOR = '[data-islands-part~="settings-area"]';
 /** The property the stylesheets read, with the bare-account fallback. */
 const FOOT_HEIGHT_PROPERTY = '--isl-foot-height';
 

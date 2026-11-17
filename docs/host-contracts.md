@@ -12,7 +12,8 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 |---|---|
 | `src/host/runtime.js` | 契约字面量、本地名提取、区域/部件表、遍历器 |
 | `src/host/caret.js` | 平滑输入光标控制器；只读 composer 契约，不读模板内部符号 |
-| `src/host/foot.js` | 轨道脚注测量；只读 `foot-area` 部件，把高度发布为 `--isl-foot-height` |
+| `src/host/footer.js` | 工作区底部 footer 控制器；折叠、拖拽高度、记忆、空态，发布 `data-islands-footer-*` 与 `--isl-footer-*` |
+| `src/host/foot.js` | 轨道脚注测量；只读 `settings-area` 部件，把高度发布为 `--isl-foot-height` |
 | `src/*.css` | 只读 `data-islands-part` 和宿主契约 |
 | `src/60-peers.css` | 第三方插件适配，允许 `[class*=...]`，核心样式不读 |
 | `src/31-caret.css` | 发送按钮强调色与光标绘制样式，读 `composer-primary` 部件 |
@@ -43,19 +44,30 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 
 `parts` 会作用于区域内的所有后代，因此 `panel`、`card`、`section`、`header` 这类通用本地名不能直接放进 `parts`：DSH 的插件设置页也会使用这些类名。对话框外壳的座位改用 `rootParts` 只匹配直接子级，`close` 再锚在 `header` 区域里；`navCell`/`active` 等只在 `settings-nav` 子树内匹配。新增区域时优先选择更窄的锚点，而不是把通用名字广播给整棵子树。
 
-## 轨道底部的共享槽位
+## 工作区底部的共享槽位
 
-`sidebar.footer.action` 是宿主在侧栏脚注里留给插件的共享槽位，和皮肤自己的设置齿轮、更新入口、账号按钮同处一条 48px 轨道。宿主的 owner props 只告诉注册方 `wide`，而 Islands 让 `wide` 恒为 true，所以宽栏插件会在这里渲染带文字的整行按钮。账号行旁边的插件入口（例如插件插进 `settings-trigger-row` 的那一颗）是同一类访客。这两个位置都归皮肤所有，规则分两处。宿主的每个 slot 出口都会包一层 `display: contents` 的 `[data-slot="<key>"]` 锚点：它不参与布局，但仍在选择器树里，所以 footer 规则必须穿过 `[data-slot="sidebar.footer.action"]` 才能命中访客控件。
+`sidebar.footer.action` 是插件 footer 内容的共享槽位。islands-ui 把它从 48px 轨道挪到了**工作区岛底部**：宿主仍报告 `wide`（侧栏是展开态），而座位现在也确实是宽的（工作区列的宽度），所以宽栏插件不再需要挤进窄轨道。
 
-- **几何**：`src/20-sidebar.css` 把 `footer-actions` 的 slot 锚点（`[data-slot="sidebar.footer.action"]`）下的**直接子级** `button`/`a`/`role=button` 归一化成 36px 方块（宽高、`min`/`max`、margin、padding、gap 全部 `!important`，因为插件样式是内联的），并 `overflow: clip`。只匹配直接子级：访客组件内部的按钮（例如刷新按钮）仍归插件自己。无 slot 锚点的旧外壳回退到 `footer-actions` 的直接子级。`display` 不动：插件用 `display: none` 隐藏的控件仍然隐藏。
-- **标签**：`button:has(svg, img) > span:not(:has(*))` 把纯文本标签视觉隐藏（`clip`，不是 `display: none`），可访问名和插件自己的 `title`/`aria-label` 保留；图标包在 span 里时不会被误伤。
-- **交互**：hover、`focus-visible`、`aria-pressed`、`aria-expanded` 由皮肤补齐；背景色需要 `!important`，因为插件通常内联 `background: transparent`。
-- **账号行旁的入口**：`settings-trigger-row` 出现访客 `> a` 时，行改为纵向排列，访客收成 36px tile 放在账号上方（`order: -1`）。宿主的宽栏行假设「账号和入口并排」，48px 轨道放不下；只影响访客 anchor，账号和设置触发器不动。
-- **锚点**：`src/host/foot.js` 观察 `[data-islands-part~="foot-area"]`，把高度写成 `--isl-foot-height`；`16-rail.css` 与 `17-update.css` 里齿轮、更新入口和列表 `max-height` 全部从它派生。缺省值 36px 等价于「只有账号一行」，没有测量时保持旧几何。
+宿主结构是 `footArea > footerActions（sidebar.footer.action）+ settingsArea（sidebar.settings）`。展开态把 `foot-area` 设为 `display: contents`，让两个子项各占一个网格位：
 
-访客契约（给插件作者）：注入到 `sidebar.footer.action` 的控件应自带图标和 `title`/`aria-label`，皮肤会把文字标签收进可访问树。账号行旁的入口同样请用图标，皮肤会把它堆到账号上方。纯文本或需要宽度的控件在 48px 轨道里没有紧凑形态，后续走溢出入口，不在这个槽位硬塞。
+- `settings-area`：`grid-area: 4 / 1 / 6 / 2`，跨 settings/footer 两行、底部对齐，留在 48px 轨道底部（设置齿轮、账号头像仍在这里；更新入口锚定在轨道脚注上方）；
+- `footer-actions`：`grid-area: 5 / 2`，工作区列的第 5 行（footer 行），在工作区岛内部；
+- `region-area`：`grid-area: 3 / 2 / 5 / 3`，被 footer 挤压时保持内部滚动；
+- `sidebar-root::after` 的岛屿卡片仍覆盖整列，footer 视觉上属于工作区岛。
 
-不要在 `60-peers.css` 为某个 footer 插件写专用规则：槽位几何由皮肤统一负责，按插件名加例外会让下一个插件重新出问题。
+**容器由皮肤负责**（`src/host/footer.js`）：
+
+- 高度：`min-height: min(200px, max-height)`，默认自适应内容，`max-height` 为 `min(800px, 侧栏高 45%)`；矮窗口时下限自动让位给 45% 上限，不会压垮工作区。拖动 handle 上方 5px 的独立拖动条可在范围内调整，调整值写入 `localStorage`（`dsh-islands-ui:footer`），折叠/展开和下次打开窗口都按它恢复。
+- handle 的 `aria-label` 跟随 `document.documentElement.lang`（zh → 底部栏，其他 → Footer），`aria-controls` 指向 footer 容器（无 id 时补 `isl-footer-seat`）；不设置 `title` 原生提示。
+- 折叠：底部 20px handle 条可点击收起/展开；收起时 footer 只保留这条，工作区恢复全高。默认展开。调整高度从 handle 上方 5px 的独立拖动条进行（悬停/拖动时显示强调色细条），按钮本身只负责点击，两者热区不重叠。
+- 滚动：内容超过当前高度时在 `footer-actions` 内滚动。
+- 空态：槽位没有子项/文本时隐藏 footer 和 handle，工作区占满全高（presence-based；插件自己 `display:none` 的占位也算空）。
+- 分隔与 handle：footer 与工作区之间用 20px 顶部留白分隔（不用 `border`）；handle 是覆盖整行留白的白底遮罩条（hover/拖动时整行圆角高亮），滚动内容不会从按钮两侧露出；折叠时它作为岛屿底盖，水平保持与展开相同的 8px 内缩（宽度不跳变），仅垂直内缩 1px 让卡片底边框可见，底部圆角用内圆角 `calc(var(--isl-radius-lg) - 1px)`；窄屏抽屉下 footer 上移 `--isl-gap`。工作区折叠（`data-islands-workspace-collapsed`）时 footer 和 handle 一起隐藏。
+- 访客几何不再在展开态被改写；只保留 `sidebar-collapsed` 轨道的 36px tile（`src/20-sidebar.css`）。
+
+访客契约（给插件作者）：footer 座位是宽的，按普通宽内容渲染即可；不要再假设 48px 轨道。注入到 `sidebar.footer.action` 的控件不需要自带图标来“缩成方块”，带上正常的标题/aria-label 即可。
+
+不要在 `60-peers.css` 为某个 footer 插件写专用规则：座位几何由皮肤统一负责，按插件名加例外会让下一个插件重新出问题。
 
 ## 宿主改名时
 

@@ -58,7 +58,7 @@ test('footer actions normalize guest controls into a rail tile', async () => {
   const css = await read('src/20-sidebar.css');
   const tile = rule(
     css,
-    `[data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])`,
+    `[data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])`,
     'width: 36px !important',
   );
   // The host wraps every slot outlet in a display:contents anchor, so the
@@ -74,7 +74,7 @@ test('footer actions normalize guest controls into a rail tile', async () => {
 
   const label = rule(
     css,
-    `[data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*))`,
+    `[data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):has(svg, img) > span:not(:has(*))`,
     'clip: rect',
   );
   assert.match(label, /position: absolute !important/u);
@@ -84,10 +84,84 @@ test('footer actions normalize guest controls into a rail tile', async () => {
   // plain hover rule, so the guest states must be important too.
   const hover = rule(
     css,
-    `[data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):hover,`,
+    `[data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button']):hover,`,
     'background',
   );
   assert.match(hover, /background: var\(--isl-hover\) !important/u);
+});
+
+test('the expanded footer is a wide seat at the bottom of the workspace', async () => {
+  const css = await read('src/20-sidebar.css');
+
+  const wrapper = rule(css, `[data-islands-part~="foot-area"] {`, 'display: contents');
+  assert.match(wrapper, /display: contents/u);
+
+  const settings = rule(css, `[data-islands-part~="settings-area"] {`, 'grid-area: 4 / 1');
+  assert.match(settings, /grid-area: 4 \/ 1/u);
+  assert.match(settings, /display: flex/u);
+
+  const region = rule(css, `[data-islands-part~="region-area"] {`, 'grid-area: 3 / 2 / 5 / 3');
+  assert.match(region, /grid-area: 3 \/ 2 \/ 5 \/ 3/u);
+
+  const seat = rule(css, `[data-islands-part~="footer-actions"] {`, 'grid-area: 5 / 2');
+  assert.match(seat, /grid-area: 5 \/ 2/u);
+  assert.match(seat, /height: var\(--isl-footer-height, auto\)/u);
+  assert.match(seat, /max-height: var\(--isl-footer-max/u);
+  assert.match(seat, /overflow: auto/u);
+  // The separation is a top gap (which also seats the handle), not a border.
+  assert.match(seat, /padding: 20px 8px 8px/u);
+  assert.match(seat, /min-height: min\(200px, var\(--isl-footer-max/u);
+  assert.doesNotMatch(seat, /border-top/u);
+
+  // The 1.2.2 tile normalization is now the collapsed rail's contract only.
+  const tile = rule(
+    css,
+    `[data-islands-part~="sidebar-collapsed"] [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > :is(button, a, [role='button'])`,
+    'width: 36px !important',
+  );
+  assert.match(tile, /width: 36px !important/u);
+});
+
+test('collapsing the workspace hides the footer and its handle', async () => {
+  const css = await read('src/20-sidebar.css');
+  const hide = rule(css, `[data-islands-workspace-collapsed]`, 'footer-actions');
+  assert.match(hide, /footer-actions/u);
+  assert.match(hide, /display: none !important/u);
+
+  const source = await read('src/host/footer.js');
+  assert.match(source, /data-islands-workspace-collapsed/u);
+});
+
+test('the workspace footer controller owns collapse, height and the handle', async () => {
+  const source = await read('src/host/footer.js');
+  assert.match(source, /export function installFooterPanel/u);
+  assert.match(source, /data-islands-footer-collapsed/u);
+  assert.match(source, /data-islands-footer-empty/u);
+  assert.match(source, /--isl-footer-height/u);
+  assert.match(source, /--isl-footer-max/u);
+  assert.match(source, /localStorage/u);
+  assert.match(source, /pointerdown/u);
+  assert.match(source, /ResizeObserver/u);
+  // Resize lives on a dedicated 5px strip above the bar, outside the click
+  // target, so a click cannot be mistaken for a drag.
+  assert.match(source, /FOOTER_RESIZE_STRIP = 5/u);
+  assert.match(source, /FOOTER_MIN_HEIGHT = 200/u);
+  assert.match(source, /FOOTER_MAX_PX = 800/u);
+  assert.match(source, /const verticalInset = state\.collapsed \? 1 : 0/u);
+  // The click bar uses aria-label only; no native title tooltip.
+  assert.doesNotMatch(source, /handle\.title/u);
+  assert.match(source, /rect\.top - FOOTER_RESIZE_STRIP/u);
+  assert.match(source, /isl-footerResize/u);
+  // The seat can be hidden by the empty state while a plugin mounts; content
+  // presence must not depend on a rendered box, or the seat never comes back.
+  assert.match(source, /const root = slot \?\? seat/u);
+  assert.match(source, /getComputedStyle\(child\)\.display !== 'none'/u);
+  assert.match(source, /data-sidebar-drawer/u);
+  assert.match(source, /transitionend/u);
+  assert.match(source, /aria-controls/u);
+  assert.match(source, /isl-footer-seat/u);
+  assert.match(source, /documentElement\.lang/u);
+  assert.match(source, /aria-label/u);
 });
 
 test('a guest anchor beside the account stacks as a rail tile', async () => {
@@ -112,6 +186,7 @@ test('a guest anchor beside the account stacks as a rail tile', async () => {
 test('the foot measure publishes a body property and cleans it up', async () => {
   const source = await read('src/host/foot.js');
   assert.match(source, /export function installFootMeasure/u);
+  assert.match(source, /settings-area/u);
   assert.match(source, /--isl-foot-height/u);
   assert.match(source, /ResizeObserver/u);
   assert.match(source, /height === 0/u);

@@ -35,8 +35,8 @@ npm view dsh-islands-ui time
 不发布也可以先用 `npm pack` 产物做一次真实安装验证：
 
 ```bash
-npm pack                         # 生成 dsh-islands-ui-1.0.0.tgz
-dsh plugin --profile desktop add /绝对路径/dsh-islands-ui-1.0.0.tgz
+npm pack                         # 生成 dsh-islands-ui-1.2.3.tgz
+dsh plugin --profile desktop add /绝对路径/dsh-islands-ui-1.2.3.tgz
 ```
 
 安装后刷新页面，确认：

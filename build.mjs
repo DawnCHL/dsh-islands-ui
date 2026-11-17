@@ -42,6 +42,12 @@ const caretModule = caret.replace(/^export\s+/gmu, '').trim();
 const foot = await readFile(join(srcDir, 'host', 'foot.js'), 'utf8');
 const footModule = foot.replace(/^export\s+/gmu, '').trim();
 
+// The workspace footer panel is a DOM controller as well: it owns collapse,
+// the remembered height and the drag handle, and publishes body attributes
+// the stylesheet reads.
+const footer = await readFile(join(srcDir, 'host', 'footer.js'), 'utf8');
+const footerModule = footer.replace(/^export\s+/gmu, '').trim();
+
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 if (!template.includes('/*__HOST_RUNTIME__*/')) {
@@ -53,12 +59,16 @@ if (!template.includes('/*__CARET_MODULE__*/')) {
 if (!template.includes('/*__FOOT_MODULE__*/')) {
   throw new Error('client.template.js lost its foot-measure placeholder');
 }
+if (!template.includes('/*__FOOTER_MODULE__*/')) {
+  throw new Error('client.template.js lost its footer-panel placeholder');
+}
 const built = template
   .replace('/*__HOST_RUNTIME__*/', () => hostRuntime)
   .replace('/*__CARET_MODULE__*/', () => caretModule)
   .replace('/*__FOOT_MODULE__*/', () => footModule)
+  .replace('/*__FOOTER_MODULE__*/', () => footerModule)
   .replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
-const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length} bytes of CSS, host bridge and controllers`;
+const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length + footerModule.length} bytes of CSS, host bridge and controllers`;
 
 if (process.argv.includes('--check')) {
   let current = '';

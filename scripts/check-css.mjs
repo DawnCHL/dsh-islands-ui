@@ -20,6 +20,8 @@ const ownAttributes = new Set([
   'data-islands-ui',
   'data-islands-part',
   'data-islands-workspace-collapsed',
+  'data-islands-footer-collapsed',
+  'data-islands-footer-empty',
   'data-islands-accent',
   'data-islands-animating',
   'data-islands-smooth-caret',
