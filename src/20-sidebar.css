@@ -646,7 +646,7 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
    36px width, wrapping (a multi-icon group becomes a vertical pill), `order:
    -1` above the account. Guest text moves into the accessibility tree, the
    same way the rail treats its own tiles. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]) {
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]):not([data-islands-part]):not([role='status']):not([aria-live]) {
   order: -1;
   flex: none;
   box-sizing: border-box;
@@ -654,6 +654,18 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   max-width: 36px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* An icon-bearing guest keeps its icon and moves a leaf text label into the
+   accessibility tree. Text left in flow would wrap inside the 36px column and
+   grow the foot, pushing the gear and the rail reserve up. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]) :is(a, button) > span:not(:has(*)) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
 }
 
 /* A launcher that replaces the account menu (dsh-quick-restart, DS-Bot) uses
@@ -678,6 +690,12 @@ body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sid
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"],
 body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"])::after {
   display: none !important;
+}
+
+/* The hidden workspace column no longer needs a layout track; keeping it at 0
+   stops the clipped workspace from laying out behind the 48px rail. */
+body[data-islands-ui][data-islands-workspace-collapsed] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) {
+  grid-template-columns: var(--isl-rail-width) 0;
 }
 
 /* ---- Custom rail replaces the shipped brand + panel icon column ---------- */

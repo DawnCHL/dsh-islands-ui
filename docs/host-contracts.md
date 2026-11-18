@@ -14,6 +14,7 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 | `src/host/caret.js` | 平滑输入光标控制器；只读 composer 契约，不读模板内部符号 |
 | `src/host/footer.js` | 工作区底部 footer 控制器；折叠、拖拽高度、记忆、空态，发布 `data-islands-footer-*` 与 `--isl-footer-*` |
 | `src/host/foot.js` | 轨道脚注测量；只读 `settings-area` 部件，把高度发布为 `--isl-foot-height` |
+| `src/host/collapse.js` | 宿主折叠策略；区分用户折叠与自动折叠（纯函数，单测覆盖） |
 | `src/*.css` | 只读 `data-islands-part` 和宿主契约 |
 | `src/60-peers.css` | 第三方插件适配，允许 `[class*=...]`，核心样式不读 |
 | `src/31-caret.css` | 发送按钮强调色与光标绘制样式，读 `composer-primary` 部件 |
@@ -50,7 +51,7 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 
 宿主结构是 `footArea > footerActions（sidebar.footer.action）+ settingsArea（sidebar.settings）`。展开态把 `foot-area` 设为 `display: contents`，让两个子项各占一个网格位：
 
-- `settings-area`：`grid-area: 4 / 1 / 6 / 2`，跨 settings/footer 两行、底部对齐，留在 48px 轨道底部（设置齿轮、账号头像仍在这里；更新入口锚定在轨道脚注上方）；
+- `settings-area`：`grid-area: 4 / 1 / 6 / 2`，跨 settings/footer 两行、底部对齐，留在 48px 轨道底部（账号 launcher 在这里；设置齿轮是皮肤自己的 `.isl-railSettings`，不在这个座位里；更新入口锚定在轨道脚注上方）；
   这是 48px 轨道列的脚注：账号是 36px 头像 tile，插件加到设置行里的入口由皮肤收成同一列 tile（`max-width:36px`、`flex-wrap:wrap`、`order:-1` 在账号上方；多图标组折成竖排胶囊，文字进无障碍树）。宿主仍报告 `wide=true`，这是有意的：皮肤不把插件的宽入口塞进更窄的座位，而是把入口折进轨道；需要宽内容的插件请用 `sidebar.footer.action`（工作区岛底部的宽座位）。
 - `footer-actions`：`grid-area: 5 / 2`，工作区列的第 5 行（footer 行），在工作区岛内部；
 - `region-area`：`grid-area: 3 / 2 / 5 / 3`，被 footer 挤压时保持内部滚动；
@@ -74,9 +75,16 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 
 `data-islands-workspace-collapsed` 是唯一的折叠真相；宿主在两种状态下都保持 `wide=true`，插件的 `wide=false` 分支不会出现：
 
-- 皮肤隐藏工作区列（new-session、region-area、footer-actions、`::after` 岛屿卡片），把帧首列缩到 `--isl-rail-collapsed-width`（48px，与展开态轨道列同宽），`settings-area` 轨道脚注原样保留；
-- 工作区 DOM 不卸载，会话列表滚动位置和侧栏宽度自然保留，不需要轨道改写或宽度恢复；
-- 宿主原生折叠（macOS 主 `⌘B` 走桌面桥、Windows 标题栏按钮）由 `native collapse conversion` 立即转换回皮肤折叠，宿主不会留在 `sidebar-collapsed`；
+- 皮肤隐藏工作区列（new-session、region-area、footer-actions、`::after` 岛屿卡片），把帧首列缩到 `--isl-rail-collapsed-width`（= `--isl-rail-width`，48px，与展开态轨道列同宽），`settings-area` 轨道脚注原样保留；
+- 工作区 DOM 不卸载，**皮肤折叠路径**下会话列表滚动位置和侧栏宽度保留；原生 `⌘B` 由宿主 `toggleSidebar` 展开会回到默认 280（公开 layout 服务没有宽度 setter）；
+- 宿主原生折叠（macOS 主 `⌘B` 走桌面桥、Windows 标题栏按钮）由 `native collapse conversion` 转换回皮肤折叠；转换由 `src/host/collapse.js` 的 `hostCollapseAction()` 决定：
+  - 皮肤关闭 → 不接管；
+  - drawer 模式 → 清掉皮肤折叠（drawer 自己拥有 workspace）；
+  - `<1024px`、跨断点 resize、窄窗右栏打开等**自动折叠** → 只“折叠”（不会把用户折叠的工作区反过来展开），并把宿主重新展开；
+  - 宽窗下没有上述上下文的折叠才是用户手势 → toggle；
+- 关闭皮肤时同时清掉皮肤折叠和 `data-islands-animating`，宿主恢复原生折叠行为；
+- 折叠时若焦点在工作区列内（不在轨道/topbar/settings 座位），焦点移到 topbar toggle 或轨道首页；topbar toggle 带 `aria-expanded` 和折叠/展开文案；
+- `sidebar-collapsed` 的样式只用于 conversion 的那一帧（宿主不会常驻折叠）；
 - 轨道图标在折叠态选中即展开工作区（`select()` 先 `toggleWorkspace()` 再 `selectPanel()`）。
 
 ## 宿主改名时

@@ -4,12 +4,15 @@
 
 ### 界面
 
-- 折叠改为**宿主保持展开、皮肤隐藏工作区列**的单一模型：`data-islands-workspace-collapsed` 是唯一折叠状态，插件始终收到 `wide=true`，不会再出现 `wide=false` 时宿主 compact footer 把多个入口并排塞进 36px 轨道、导致图标被裁到窗口外的问题。
-- 展开态 settings 座位保持 48px 轨道列：账号是 36px 头像 tile；插件入口统一折成 36px tile，`order:-1` 竖排在头像上方（多图标组折成竖排胶囊），文字进无障碍树。宿主仍报 `wide=true`，皮肤负责把入口折进轨道。
-- 折叠帧首列宽度改为 `--isl-rail-collapsed-width: 48px`，与展开态轨道列一致；工作区 DOM 保持挂载，会话列表滚动位置和侧栏宽度不再丢失。
-- 删除宿主折叠控制器 `src/host/rail.js` 与 `sidebar-collapsed` 的常驻处理；宿主原生折叠仍由 `native collapse conversion` 立即转换回皮肤折叠。轨道图标在折叠态选中即展开工作区。
+- 折叠模型：宿主永远保持展开（`wide=true`），`data-islands-workspace-collapsed` 是唯一折叠状态；皮肤隐藏工作区列并把帧首列缩到 `--isl-rail-collapsed-width`（= `--isl-rail-width`，48px）。插件不会再收到 `wide=false`，也不会出现宿主 compact footer 把多个入口并排塞进 36px 轨道被裁的问题。
+- 展开态 settings 座位是 48px 轨道列：账号 36px 头像 tile；插件加到设置行里的入口统一折成 36px tile（`max-width:36px`、`flex-wrap:wrap`、`order:-1` 在账号上方）；图标访客的叶标签进入无障碍树；替换式 launcher 只保留头像。
+- 宿主原生折叠（macOS 主 `⌘B` / Windows 标题栏按钮）由 `native collapse conversion` 转换回皮肤折叠；新增 `src/host/collapse.js` 的 `hostCollapseAction()`：皮肤关闭不接管、drawer 清状态、`<1024`/跨断点 resize/窄窗右栏等自动折叠只折叠不 toggle，只有宽窗下的用户手势才 toggle。
+- 关闭皮肤时清掉皮肤折叠与 `data-islands-animating`，宿主恢复原生折叠。
+- 折叠帧首列改用 `--isl-rail-collapsed-width: var(--isl-rail-width)`；工作区 DOM 保持挂载，皮肤折叠路径下滚动位置与侧栏宽度保留（原生 `⌘B` 仍按宿主默认回 280）。
+- 折叠时焦点在工作区列内会移到 topbar toggle / 轨道首页；topbar toggle 补 `aria-expanded` 与折叠/展开文案。
+- 轨道图标在折叠态选中即展开工作区。
+- 修正文档：不再声称删除从未引入的 `src/host/rail.js`；`sidebar-collapsed` 样式仅用于 conversion 瞬态；去掉重复的 1.2.3 标题。
 
-## 1.2.3 — 2026-11-17
 ## 1.2.3 — 2026-11-17
 
 ### 界面

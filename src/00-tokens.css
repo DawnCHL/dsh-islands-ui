@@ -30,8 +30,9 @@ body[data-islands-ui] {
   --isl-topbar-height: 40px;
   /* Extra chrome above the app top bar (the Windows title bar). */
   --isl-chrome-top: 0px;
-  --isl-rail-collapsed-width: 48px;
   --isl-rail-width: 48px;
+  /* The collapsed track is the rail column by definition. */
+  --isl-rail-collapsed-width: var(--isl-rail-width);
   /* Rail foot band: the space between the measured foot stack and the gear,
      and between the gear and the update entry. */
   --isl-foot-gap: 20px;

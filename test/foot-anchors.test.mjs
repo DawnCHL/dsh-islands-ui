@@ -51,8 +51,20 @@ test('the update entry stacks above the gear from the same measurement', async (
 test('the foot tokens exist in the token layer', async () => {
   const css = await read('src/00-tokens.css');
   assert.match(css, /--isl-foot-gap:\s*20px/u);
-  assert.match(css, /--isl-rail-collapsed-width:\s*48px/u);
+  assert.match(css, /--isl-rail-width:\s*48px/u);
+  assert.match(css, /--isl-rail-collapsed-width:\s*var\(--isl-rail-width\)/u);
   assert.match(css, /--isl-update-gap:\s*8px/u);
+});
+
+test('the collapsed frame track uses the rail token', async () => {
+  const css = await read('src/10-shell.css');
+  const frame = rule(
+    css,
+    `[data-islands-part~="layout-frame"]:not(`,
+    'var(--isl-rail-collapsed-width)',
+  );
+  assert.match(frame, /grid-template-columns/u);
+  assert.match(frame, /!important/u);
 });
 
 test('footer actions normalize guest controls into a rail tile', async () => {
@@ -178,13 +190,21 @@ test('the rail seat folds guests into one column above the account', async () =>
 
   const guest = rule(
     css,
-    `[data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]) {`,
+    `[data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]):not([data-islands-part]):not([role='status']):not([aria-live]) {`,
     'order: -1',
   );
   assert.match(guest, /max-width: 36px/u);
   assert.match(guest, /flex-wrap: wrap/u);
   assert.match(guest, /box-sizing: border-box/u);
   assert.doesNotMatch(css, /:has\(> a\)/u);
+
+  // Icon guests keep the icon and move a leaf label into the a11y tree.
+  const guestLabel = rule(
+    css,
+    `> :not([data-slot]) :is(a, button) > span:not(:has(*)) {`,
+    'clip: rect(0 0 0 0)',
+  );
+  assert.match(guestLabel, /position: absolute !important/u);
 
   const label = rule(
     css,
