@@ -1129,6 +1129,9 @@ window.__ModuleLoader__.load({
             return;
           }
         }
+        // The rail is the navigation while the workspace is hidden: selecting
+        // a destination opens the workspace on it, matching the host's rail.
+        if (document.body.hasAttribute(WORKSPACE_ATTR)) toggleWorkspace();
         layoutService?.selectPanel(id);
       };
 

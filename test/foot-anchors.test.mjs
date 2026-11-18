@@ -51,6 +51,7 @@ test('the update entry stacks above the gear from the same measurement', async (
 test('the foot tokens exist in the token layer', async () => {
   const css = await read('src/00-tokens.css');
   assert.match(css, /--isl-foot-gap:\s*20px/u);
+  assert.match(css, /--isl-rail-collapsed-width:\s*48px/u);
   assert.match(css, /--isl-update-gap:\s*8px/u);
 });
 
@@ -164,23 +165,33 @@ test('the workspace footer controller owns collapse, height and the handle', asy
   assert.match(source, /aria-label/u);
 });
 
-test('a guest anchor beside the account stacks as a rail tile', async () => {
+test('the rail seat folds guests into one column above the account', async () => {
   const css = await read('src/20-sidebar.css');
   const row = rule(
     css,
-    `[data-islands-part~="settings-trigger-row"]:has(> a) {`,
+    `[data-islands-part~="settings-trigger-row"] {`,
     'flex-direction: column',
   );
   assert.match(row, /width: auto/u);
   assert.match(row, /height: auto/u);
   assert.match(row, /gap: 2px/u);
 
-  const guest = rule(css, `[data-islands-part~="settings-trigger-row"] > a {`, 'order: -1');
-  assert.match(guest, /box-sizing: border-box !important/u);
-  assert.match(guest, /width: 36px !important/u);
-  assert.match(guest, /height: 36px !important/u);
-  assert.match(guest, /margin: 3px 0 !important/u);
-  assert.match(guest, /overflow: clip !important/u);
+  const guest = rule(
+    css,
+    `[data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]) {`,
+    'order: -1',
+  );
+  assert.match(guest, /max-width: 36px/u);
+  assert.match(guest, /flex-wrap: wrap/u);
+  assert.match(guest, /box-sizing: border-box/u);
+  assert.doesNotMatch(css, /:has\(> a\)/u);
+
+  const label = rule(
+    css,
+    `button[aria-haspopup] > :not(:first-child):not(:has(*)) {`,
+    'clip: rect(0 0 0 0)',
+  );
+  assert.match(label, /position: absolute !important/u);
 });
 
 test('the foot measure publishes a body property and cleans it up', async () => {

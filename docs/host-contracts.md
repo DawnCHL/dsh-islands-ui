@@ -51,6 +51,7 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 宿主结构是 `footArea > footerActions（sidebar.footer.action）+ settingsArea（sidebar.settings）`。展开态把 `foot-area` 设为 `display: contents`，让两个子项各占一个网格位：
 
 - `settings-area`：`grid-area: 4 / 1 / 6 / 2`，跨 settings/footer 两行、底部对齐，留在 48px 轨道底部（设置齿轮、账号头像仍在这里；更新入口锚定在轨道脚注上方）；
+  这是 48px 轨道列的脚注：账号是 36px 头像 tile，插件加到设置行里的入口由皮肤收成同一列 tile（`max-width:36px`、`flex-wrap:wrap`、`order:-1` 在账号上方；多图标组折成竖排胶囊，文字进无障碍树）。宿主仍报告 `wide=true`，这是有意的：皮肤不把插件的宽入口塞进更窄的座位，而是把入口折进轨道；需要宽内容的插件请用 `sidebar.footer.action`（工作区岛底部的宽座位）。
 - `footer-actions`：`grid-area: 5 / 2`，工作区列的第 5 行（footer 行），在工作区岛内部；
 - `region-area`：`grid-area: 3 / 2 / 5 / 3`，被 footer 挤压时保持内部滚动；
 - `sidebar-root::after` 的岛屿卡片仍覆盖整列，footer 视觉上属于工作区岛。
@@ -63,11 +64,20 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 - 滚动：内容超过当前高度时在 `footer-actions` 内滚动。
 - 空态：槽位没有子项/文本时隐藏 footer 和 handle，工作区占满全高（presence-based；插件自己 `display:none` 的占位也算空）。
 - 分隔与 handle：footer 与工作区之间用 20px 顶部留白分隔（不用 `border`）；handle 是覆盖整行留白的白底遮罩条（hover/拖动时整行圆角高亮），滚动内容不会从按钮两侧露出；折叠时它作为岛屿底盖，水平保持与展开相同的 8px 内缩（宽度不跳变），仅垂直内缩 1px 让卡片底边框可见，底部圆角用内圆角 `calc(var(--isl-radius-lg) - 1px)`；窄屏抽屉下 footer 上移 `--isl-gap`。工作区折叠（`data-islands-workspace-collapsed`）时 footer 和 handle 一起隐藏。
-- 访客几何不再在展开态被改写；只保留 `sidebar-collapsed` 轨道的 36px tile（`src/20-sidebar.css`）。
+- 访客几何在 `settings-area` 轨道座位里统一归一化（36px tile）；`footer-actions` 仍然是宽座位，不改访客几何。
 
 访客契约（给插件作者）：footer 座位是宽的，按普通宽内容渲染即可；不要再假设 48px 轨道。注入到 `sidebar.footer.action` 的控件不需要自带图标来“缩成方块”，带上正常的标题/aria-label 即可。
 
 不要在 `60-peers.css` 为某个 footer 插件写专用规则：座位几何由皮肤统一负责，按插件名加例外会让下一个插件重新出问题。
+
+## 折叠：宿主保持展开，皮肤只隐藏工作区
+
+`data-islands-workspace-collapsed` 是唯一的折叠真相；宿主在两种状态下都保持 `wide=true`，插件的 `wide=false` 分支不会出现：
+
+- 皮肤隐藏工作区列（new-session、region-area、footer-actions、`::after` 岛屿卡片），把帧首列缩到 `--isl-rail-collapsed-width`（48px，与展开态轨道列同宽），`settings-area` 轨道脚注原样保留；
+- 工作区 DOM 不卸载，会话列表滚动位置和侧栏宽度自然保留，不需要轨道改写或宽度恢复；
+- 宿主原生折叠（macOS 主 `⌘B` 走桌面桥、Windows 标题栏按钮）由 `native collapse conversion` 立即转换回皮肤折叠，宿主不会留在 `sidebar-collapsed`；
+- 轨道图标在折叠态选中即展开工作区（`select()` 先 `toggleWorkspace()` 再 `selectPanel()`）。
 
 ## 宿主改名时
 

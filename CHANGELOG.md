@@ -1,5 +1,15 @@
 # Changelog
 
+## 未发布
+
+### 界面
+
+- 折叠改为**宿主保持展开、皮肤隐藏工作区列**的单一模型：`data-islands-workspace-collapsed` 是唯一折叠状态，插件始终收到 `wide=true`，不会再出现 `wide=false` 时宿主 compact footer 把多个入口并排塞进 36px 轨道、导致图标被裁到窗口外的问题。
+- 展开态 settings 座位保持 48px 轨道列：账号是 36px 头像 tile；插件入口统一折成 36px tile，`order:-1` 竖排在头像上方（多图标组折成竖排胶囊），文字进无障碍树。宿主仍报 `wide=true`，皮肤负责把入口折进轨道。
+- 折叠帧首列宽度改为 `--isl-rail-collapsed-width: 48px`，与展开态轨道列一致；工作区 DOM 保持挂载，会话列表滚动位置和侧栏宽度不再丢失。
+- 删除宿主折叠控制器 `src/host/rail.js` 与 `sidebar-collapsed` 的常驻处理；宿主原生折叠仍由 `native collapse conversion` 立即转换回皮肤折叠。轨道图标在折叠态选中即展开工作区。
+
+## 1.2.3 — 2026-11-17
 ## 1.2.3 — 2026-11-17
 
 ### 界面
