@@ -16,6 +16,7 @@ window.__ModuleLoader__.load({
     /*__CARET_MODULE__*/
     /*__FOOT_MODULE__*/
     /*__FOOTER_MODULE__*/
+    /*__COLLAPSE_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -53,7 +54,8 @@ window.__ModuleLoader__.load({
       zh: {
         title: 'Islands 界面',
         description: '悬浮岛屿式布局：圆角面板、常驻左侧导航栏与独立的工作区列表。关闭后立即恢复默认外观。',
-        topbarToggle: '折叠或展开工作区',
+        topbarCollapse: '折叠工作区',
+        topbarExpand: '展开工作区',
         openRight: '打开侧边栏',
         closeRight: '关闭侧边栏',
         workspace: '工作区',
@@ -143,7 +145,8 @@ window.__ModuleLoader__.load({
         title: 'Islands interface',
         description:
           'Floating-island layout with rounded panels, a persistent rail and an islanded workspace list. Turn off to return to the default look immediately.',
-        topbarToggle: 'Collapse or expand the workspace',
+        topbarCollapse: 'Collapse workspace',
+        topbarExpand: 'Expand workspace',
         openRight: 'Open side panel',
         closeRight: 'Close side panel',
         workspace: 'Workspace',
@@ -277,6 +280,11 @@ window.__ModuleLoader__.load({
       } else {
         body.removeAttribute(ATTRIBUTE);
         body.style.removeProperty(CAPTION_SYNC_PROPERTY);
+        // The skin's collapse is its own state; turning the skin off must hand
+        // the sidebar back to the host exactly as it was. Publishing through
+        // the helper also resets the top bar's aria state.
+        setWorkspaceCollapsed(false);
+        body.removeAttribute('data-islands-animating');
       }
     }
 
@@ -1362,6 +1370,7 @@ window.__ModuleLoader__.load({
         {
           ref: railRef,
           className: 'isl-rail' + (dragId === null ? '' : ' is-dragging'),
+          'data-islands-rail': '',
           'aria-label': copy.workspace,
           onContextMenu: (event) => {
             event.preventDefault();
@@ -1404,6 +1413,27 @@ window.__ModuleLoader__.load({
     function IslandsRailSettings() {
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      // The host's modal restores focus to its own account trigger, not to the
+      // rail gear that opened it. Hand focus back to the gear once the dialog
+      // is gone; if the dialog never appears, do nothing.
+      const openFromGear = (event) => {
+        const gear = event.currentTarget;
+        openSettings?.();
+        let seen = false;
+        let tries = 0;
+        const tick = () => {
+          if (!(gear instanceof HTMLElement) || !gear.isConnected) return;
+          if (document.querySelector(HOST.SETTINGS_OVERLAY) !== null) {
+            seen = true;
+          } else if (seen) {
+            gear.focus({ preventScroll: true });
+            return;
+          }
+          if (tries++ >= 300) return;
+          window.setTimeout(tick, 100);
+        };
+        window.setTimeout(tick, 100);
+      };
       return h(
         'button',
         {
@@ -1411,7 +1441,7 @@ window.__ModuleLoader__.load({
           className: 'isl-railBtn isl-railSettings',
           title: withShortcut(copy.settings, 'settings.open'),
           'aria-label': withShortcut(copy.settings, 'settings.open'),
-          onClick: openSettings,
+          onClick: openFromGear,
         },
         h(GearGlyph),
       );
@@ -2052,6 +2082,42 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /** Animation length shared with the host's own sidebar transition. */
+    const WORKSPACE_ANIMATION_MS = 360;
+
+    /** The focus target used when the hidden workspace owned the focus. */
+    function workspaceFocusTarget() {
+      const toggle = document.querySelector('[data-islands-topbar-toggle]');
+      if (toggle instanceof HTMLElement && toggle.getClientRects().length > 0) return toggle;
+      const home = document.querySelector('[data-rail-id="workspace"]');
+      return home instanceof HTMLElement ? home : null;
+    }
+
+    /**
+     * Publish the skin's collapse state. This is the single write point: the
+     * host's `data-sidebar-collapsed` is only a transient mirror (the
+     * conversion restores it), and the top bar listens to this event so the
+     * toggle carries `aria-expanded` and an accurate label.
+     */
+    function setWorkspaceCollapsed(collapsed) {
+      const next = collapsed === true;
+      const root = document.querySelector(partSelector('sidebar-root'));
+      const seat = document.querySelector('[data-islands-part~="settings-area"]');
+      const active = document.activeElement;
+      const wasCollapsed = document.body.hasAttribute(WORKSPACE_ATTR);
+      if (next) document.body.setAttribute(WORKSPACE_ATTR, '');
+      else document.body.removeAttribute(WORKSPACE_ATTR);
+      window.dispatchEvent(new CustomEvent('islands:workspace-collapsed', { detail: next }));
+      if (!next || wasCollapsed) return;
+      // Hiding the workspace removes the focused row from the layout; the host
+      // only restores focus for its own collapse, so the skin does it here.
+      if (!(active instanceof HTMLElement)) return;
+      if (!(root instanceof HTMLElement) || !root.contains(active)) return;
+      if (active.closest('[data-islands-rail], [data-islands-topbar]') !== null) return;
+      if (seat instanceof HTMLElement && seat.contains(active)) return;
+      window.requestAnimationFrame(() => workspaceFocusTarget()?.focus({ preventScroll: true }));
+    }
+
     /**
      * Collapse the workspace island without asking DSH to swap the sidebar for
      * its rail-only render tree. The expanded rail stays mounted, the workspace
@@ -2067,19 +2133,19 @@ window.__ModuleLoader__.load({
         return;
       }
       if (frame !== null && frame.hasAttribute('data-sidebar-collapsed')) {
+        // A host collapse is in flight (the conversion will mirror it into the
+        // skin state); expand the host and show the workspace.
         layoutService?.toggleSidebar();
-        document.body.removeAttribute(WORKSPACE_ATTR);
+        setWorkspaceCollapsed(false);
         return;
       }
-      const collapsed = document.body.hasAttribute(WORKSPACE_ATTR);
-      if (collapsed) document.body.removeAttribute(WORKSPACE_ATTR);
-      else document.body.setAttribute(WORKSPACE_ATTR, '');
+      setWorkspaceCollapsed(!document.body.hasAttribute(WORKSPACE_ATTR));
       if (frame !== null) {
         frame.setAttribute('data-islands-animating', '');
         window.clearTimeout(animateTimer);
         animateTimer = window.setTimeout(() => {
           frame.removeAttribute('data-islands-animating');
-        }, 360);
+        }, WORKSPACE_ANIMATION_MS);
       }
     }
 
@@ -2087,17 +2153,28 @@ window.__ModuleLoader__.load({
     function IslandsTopBar() {
       const active = useLocale() ?? 'en';
       const copy = String(active).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      const [collapsed, setCollapsed] = React.useState(
+        () => document.body.hasAttribute(WORKSPACE_ATTR),
+      );
+      React.useEffect(() => {
+        const onState = (event) => setCollapsed(Boolean(event.detail));
+        window.addEventListener('islands:workspace-collapsed', onState);
+        return () => window.removeEventListener('islands:workspace-collapsed', onState);
+      }, []);
+      const label = collapsed ? copy.topbarExpand : copy.topbarCollapse;
       return h(
         'header',
-        { className: 'isl-topbar' },
+        { className: 'isl-topbar', 'data-islands-topbar': '' },
         h('div', { className: 'isl-topbarLead', 'aria-hidden': true }),
         h(
           'button',
           {
             type: 'button',
             className: 'isl-topbarToggle',
-            'aria-label': withShortcut(copy.topbarToggle, 'sidebar.left.toggle'),
-            title: withShortcut(copy.topbarToggle, 'sidebar.left.toggle'),
+            'data-islands-topbar-toggle': '',
+            'aria-label': withShortcut(label, 'sidebar.left.toggle'),
+            'aria-expanded': !collapsed,
+            title: withShortcut(label, 'sidebar.left.toggle'),
             onClick: () => toggleWorkspace(),
           },
           h(PanelGlyph),
@@ -2946,26 +3023,40 @@ window.__ModuleLoader__.load({
             scope.effect(() => off, 'dsh-islands-ui: workspace collapse shortcut');
           });
 
-          // The native primary chord reaches DSH's own sidebar collapse before any
-          // fixed listener. Convert that collapse into our workspace collapse
-          // immediately (and restore the expanded sidebar render tree) so the
-          // old rail never stays on screen. Drawer mode is different: its open
-          // state is native, and the independent desktop collapse must never hide
-          // the drawer's workspace, so entering the drawer clears that attribute.
+          // The native primary chord reaches DSH's own sidebar collapse before
+          // any fixed listener. Convert that collapse into the skin's workspace
+          // state and restore the expanded sidebar render tree so the host rail
+          // never stays on screen. Not every host collapse is a user gesture:
+          // below 1024px, across a breakpoint resize, or when a narrow right
+          // panel opens, the host collapses on its own. Those automatic
+          // collapses always HIDE the workspace (never toggle it), so a user
+          // who collapsed the workspace does not get it flipped back open by a
+          // resize. `hostCollapseAction` owns that decision and is unit tested.
           ctx.effect(() => {
             let observer;
             let timer;
+            let resizedAt = 0;
+            const onResize = () => { resizedAt = Date.now(); };
+            window.addEventListener('resize', onResize);
             const fix = () => {
               const frame = document.querySelector(FRAME);
               if (frame === null) return;
-              if (frame.hasAttribute('data-sidebar-drawer')) {
-                document.body.removeAttribute(WORKSPACE_ATTR);
+              const action = hostCollapseAction({
+                skinEnabled: document.body.hasAttribute(ATTRIBUTE),
+                drawer: frame.hasAttribute('data-sidebar-drawer'),
+                width: window.innerWidth,
+                recentResize: resizedAt !== 0 && Date.now() - resizedAt < RESIZE_GRACE_MS,
+                skinCollapsed: document.body.hasAttribute(WORKSPACE_ATTR),
+              });
+              if (action === 'ignore') return;
+              if (action === 'clear') {
+                // Drawer mode owns the workspace; the independent skin
+                // collapse must never hide the drawer's workspace.
+                setWorkspaceCollapsed(false);
                 return;
               }
               if (!frame.hasAttribute('data-sidebar-collapsed')) return;
-              const wasCollapsed = document.body.hasAttribute(WORKSPACE_ATTR);
-              if (wasCollapsed) document.body.removeAttribute(WORKSPACE_ATTR);
-              else document.body.setAttribute(WORKSPACE_ATTR, '');
+              setWorkspaceCollapsed(action === 'collapse');
               layoutService?.toggleSidebar();
             };
             const attach = () => {
@@ -2985,6 +3076,7 @@ window.__ModuleLoader__.load({
             return () => {
               window.clearTimeout(timer);
               observer?.disconnect();
+              window.removeEventListener('resize', onResize);
             };
           }, 'dsh-islands-ui: native collapse conversion');
 
