@@ -60,7 +60,7 @@ Refresh after uninstalling. Your skin preferences stay on this machine and are r
 | | Feature | Details |
 | :---: | --- | --- |
 | 🏝 | **Floating islands** | Canvas, conversation, workspace, right sidebar and bottom panel become separate rounded surfaces; flat, no drop shadows, separated by color and a 1px hairline |
-| 🧭 | **Persistent rail** | Workspace plus every plugin launcher, shown inline; the home button is a pure conversation / workspace-drawer trigger with no selected state (subtle hover and a translucent click ripple); click a panel to open it, drag to reorder with a floating preview, right-click to show or hide |
+| 🧭 | **Persistent rail** | Workspace plus every plugin launcher, shown inline; the home button is a pure conversation / workspace-drawer trigger with no selected state (subtle hover and a translucent click ripple); click a panel to open it, drag to reorder with a floating preview, right-click to show or hide; hovering an icon floats its name to the right in a dark pill that follows the light / dark theme |
 | ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color, follow-theme and the smooth input caret |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
 | 🌙 | **Dark mode** | Full dark palette: near-black canvas, dark islands, translucent interaction layers |
