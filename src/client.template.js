@@ -956,6 +956,92 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M6 2v4L4 8v1.5h3.2V14l.8 1 .8-1V9.5H12V8l-2-2V2', stroke: 'currentColor', strokeWidth: 1.3, strokeLinejoin: 'round' }));
     }
 
+    /** Hover label delay; moving between tiles swaps the label without it. */
+    const RAIL_TIP_DELAY_MS = 340;
+
+    /**
+     * One hover label for the rail chain (panel tiles and the settings gear).
+     * The rail clips horizontally, so the pill is portalled to <body> and
+     * parked at fixed coordinates beside the tile that owns it: it must not be
+     * a child of the focused button or a sibling inside the scrolling rail.
+     */
+    function useRailTip() {
+      const [tip, setTip] = React.useState(null);
+      const timerRef = React.useRef(0);
+      const shownRef = React.useRef(false);
+      shownRef.current = tip !== null;
+
+      const hide = React.useCallback(() => {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = 0;
+        setTip(null);
+      }, []);
+
+      const anchorRef = React.useRef(null);
+
+      // Re-measures the tile that owns the label. Identity is preserved when
+      // nothing moved so a scroll elsewhere in the app costs no re-render.
+      const place = React.useCallback((node, label) => {
+        const rect = node.getBoundingClientRect();
+        setTip((prev) => {
+          const left = Math.round(rect.right) + 8;
+          const top = Math.round(rect.top + rect.height / 2);
+          if (prev !== null && prev.left === left && prev.top === top && prev.label === label) return prev;
+          return { label, left, top };
+        });
+      }, []);
+
+      const show = React.useCallback((node, label, immediate = false) => {
+        if (!(node instanceof Element) || typeof label !== 'string' || label === '') return;
+        window.clearTimeout(timerRef.current);
+        anchorRef.current = { node, label };
+        // A second tile while the label is already open swaps it in place;
+        // only the first hover waits, so the rail never flickers on the way
+        // down the column.
+        if (immediate || shownRef.current) place(node, label);
+        else timerRef.current = window.setTimeout(() => place(node, label), RAIL_TIP_DELAY_MS);
+      }, [place]);
+
+      React.useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+      // Keep the parked label glued to its tile: the rail scrolls, the window
+      // resizes, and the transcript streaming above must not evict it either —
+      // only a tile that left the document takes the label with it.
+      React.useEffect(() => {
+        if (tip === null) return undefined;
+        const sync = () => {
+          const anchor = anchorRef.current;
+          if (anchor === null || !anchor.node.isConnected) {
+            hide();
+            return;
+          }
+          place(anchor.node, anchor.label);
+        };
+        window.addEventListener('scroll', sync, true);
+        window.addEventListener('resize', sync);
+        return () => {
+          window.removeEventListener('scroll', sync, true);
+          window.removeEventListener('resize', sync);
+        };
+      }, [tip, hide, place]);
+
+      const node = tip === null
+        ? null
+        : ReactDOM.createPortal(
+            h(
+              'div',
+              {
+                className: 'isl-railTip',
+                'aria-hidden': true,
+                style: { left: `${tip.left}px`, top: `${tip.top}px` },
+              },
+              tip.label,
+            ),
+            document.body,
+          );
+      return { show, hide, node };
+    }
+
     /**
      * Left rail: the workspace home plus every panel launcher registered in
      * `sidebar.panellist`. Entries are shown directly, reordered by dragging,
@@ -975,6 +1061,7 @@ window.__ModuleLoader__.load({
       const configRef = React.useRef(config);
       const dragRef = React.useRef(null);
       const suppressClickRef = React.useRef(false);
+      const tip = useRailTip();
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
       configRef.current = config;
@@ -1090,6 +1177,7 @@ window.__ModuleLoader__.load({
       };
 
       const openMenuAt = (x, y, contextId) => {
+        tip.hide();
         const width = 248;
         const height = Math.min(window.innerHeight - 16, 76 + orderedEntries.length * 36);
         const left = Math.max(8, Math.min(x, window.innerWidth - width - 8));
@@ -1178,6 +1266,7 @@ window.__ModuleLoader__.load({
 
       const beginDrag = (event, id) => {
         if (event.button !== 0 || dragRef.current !== null) return;
+        tip.hide();
         const pointerId = event.pointerId;
         const startX = event.clientX;
         const startY = event.clientY;
@@ -1261,6 +1350,9 @@ window.__ModuleLoader__.load({
         const selected = id !== null && active === id;
         // `dragId` is null while idle, so the house (id null) must not match it.
         const dragging = id !== null && dragId === id;
+        // The pill names the destination only; the owner suffix stays in the
+        // aria-label and the right-click menu.
+        const tipLabel = id === null ? copy.workspace : byId.get(id)?.label ?? id;
         return h(
           'button',
           {
@@ -1277,7 +1369,6 @@ window.__ModuleLoader__.load({
               (selected ? ' is-active' : '') +
               (dragging ? ' is-dragging' : '') +
               (extraClass ? ` ${extraClass}` : ''),
-            title: label,
             'aria-label': label,
             'aria-pressed': id === null ? undefined : selected,
             'data-rail-id': id ?? 'workspace',
@@ -1288,8 +1379,23 @@ window.__ModuleLoader__.load({
                 return;
               }
               if (id === null) addRipple(event);
+              tip.hide();
               select(id);
             },
+            onPointerEnter: (event) => {
+              if (event.pointerType === 'touch' || dragRef.current !== null) return;
+              tip.show(event.currentTarget, tipLabel);
+            },
+            onPointerLeave: tip.hide,
+            onPointerCancel: tip.hide,
+            // Keyboard focus gets the label at once; a mouse click focuses the
+            // tile without `:focus-visible`, so it does not pop the pill back.
+            onFocus: (event) => {
+              if (event.currentTarget.matches(':focus-visible')) {
+                tip.show(event.currentTarget, tipLabel, true);
+              }
+            },
+            onBlur: tip.hide,
             onPointerDown: draggable ? (event) => beginDrag(event, id) : undefined,
           },
           glyph,
@@ -1372,6 +1478,8 @@ window.__ModuleLoader__.load({
           className: 'isl-rail' + (dragId === null ? '' : ' is-dragging'),
           'data-islands-rail': '',
           'aria-label': copy.workspace,
+          // Safety net: a tile removed mid-hover never fires `pointerleave`.
+          onPointerLeave: tip.hide,
           onContextMenu: (event) => {
             event.preventDefault();
             const target = event.target instanceof Element ? event.target.closest('[data-rail-id]') : null;
@@ -1394,7 +1502,6 @@ window.__ModuleLoader__.load({
               {
                 type: 'button',
                 className: 'isl-railBtn isl-railAdd',
-                title: copy.railTitle,
                 'aria-label': copy.railTitle,
                 'aria-haspopup': 'menu',
                 'aria-expanded': menu !== null,
@@ -1402,17 +1509,32 @@ window.__ModuleLoader__.load({
                   const rect = event.currentTarget.getBoundingClientRect();
                   openMenuAt(rect.right + 8, rect.top, null);
                 },
+                onPointerEnter: (event) => {
+                  if (event.pointerType === 'touch') return;
+                  tip.show(event.currentTarget, copy.railTitle);
+                },
+                onPointerLeave: tip.hide,
+                onPointerCancel: tip.hide,
+                onFocus: (event) => {
+                  if (event.currentTarget.matches(':focus-visible')) {
+                    tip.show(event.currentTarget, copy.railTitle, true);
+                  }
+                },
+                onBlur: tip.hide,
               },
               h(PlusGlyph),
             )
           : null,
         menuNode,
+        tip.node,
       );
     }
 
     function IslandsRailSettings() {
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
+      const tip = useRailTip();
+      const label = withShortcut(copy.settings, 'settings.open');
       // The host's modal restores focus to its own account trigger, not to the
       // rail gear that opened it. Hand focus back to the gear once the dialog
       // is gone; if the dialog never appears, do nothing.
@@ -1439,11 +1561,23 @@ window.__ModuleLoader__.load({
         {
           type: 'button',
           className: 'isl-railBtn isl-railSettings',
-          title: withShortcut(copy.settings, 'settings.open'),
-          'aria-label': withShortcut(copy.settings, 'settings.open'),
+          'aria-label': label,
           onClick: openFromGear,
+          onPointerEnter: (event) => {
+            if (event.pointerType === 'touch') return;
+            tip.show(event.currentTarget, label);
+          },
+          onPointerLeave: tip.hide,
+          onPointerCancel: tip.hide,
+          onFocus: (event) => {
+            if (event.currentTarget.matches(':focus-visible')) {
+              tip.show(event.currentTarget, label, true);
+            }
+          },
+          onBlur: tip.hide,
         },
         h(GearGlyph),
+        tip.node,
       );
     }
 

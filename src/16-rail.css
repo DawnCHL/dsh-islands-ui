@@ -65,6 +65,55 @@ body[data-islands-ui] .isl-railBtn:hover {
   color: var(--dsw-alias-label-primary);
 }
 
+/* ---- Hover label ------------------------------------------------------- */
+/* The rail clips horizontally (`overflow-x: hidden`) and scrolls vertically,
+   so the label cannot be a pseudo-element of the tile: it is a fixed-position
+   pill portalled to <body> and parked just right of the hovered tile, centred
+   on it. It never takes pointer events, so it cannot steal the hover it
+   belongs to. */
+body[data-islands-ui] .isl-railTip {
+  position: fixed;
+  z-index: 1200;
+  box-sizing: border-box;
+  max-width: 220px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--isl-tooltip-bg);
+  box-shadow:
+    0 0 0 1px var(--isl-tooltip-ring),
+    var(--isl-tooltip-shadow);
+  color: var(--isl-tooltip-fg);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(-50%);
+  animation: isl-rail-tip-in 120ms var(--ds-ease-in-out) both;
+}
+
+@keyframes isl-rail-tip-in {
+  from {
+    opacity: 0;
+    transform: translate(-4px, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-islands-ui] .isl-railTip {
+    animation: none;
+  }
+}
+
 /* The house is a pure navigation trigger (conversation / workspace drawer),
    not a destination in the panel model. It has no persistent selected state;
    hover keeps the standard rail feedback and a click paints a translucent
