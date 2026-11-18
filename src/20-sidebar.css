@@ -212,8 +212,11 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
 }
 
 body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"] {
+  flex-direction: column;
   width: auto;
+  height: auto;
   margin: 4px 0 2px;
+  gap: 2px;
   justify-content: center;
 }
 
@@ -427,7 +430,7 @@ body[data-islands-ui][data-islands-footer-empty] [data-islands-part~="sidebar-ro
 }
 
 /* ---- Collapsed rail: guest footer controls ------------------------------
-   In the 56px rail the host reports a narrow foot of additive actions, so the
+   In the 48px rail the host reports a narrow foot of additive actions, so the
    1.2.2 normalization stays here only: every top-level guest control becomes a
    36px tile and an icon-bearing control's text label moves to the accessible
    tree. The expanded footer above is a wide seat and must NOT inherit these
@@ -514,7 +517,7 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"][data-islands-part~="si
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  padding: 8px 10px 6px;
+  padding: 8px 6px 6px;
   overflow: hidden;
 }
 
@@ -635,42 +638,29 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   overflow: hidden;
 }
 
-/* ---- Guests beside the account launcher ----------------------------------
-   Plugins can insert their own entry next to the account launcher (a plugin
-   entry, for example) through the host's settings row. That row is skin-owned
-   chrome too: a 48px rail cannot hold the account plus another action side by
-   side, and the host's wide layout assumes it can. When a guest anchor is
-   present the row stacks, and the guest becomes the same 36px tile as the
-   rail. `order: -1` keeps the guest above the account, matching where the
-   host's rail puts a footer action. The foot measure carries the taller row
-   into the gear and the rail reserve. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"]:has(> a) {
-  flex-direction: column;
-  width: auto;
-  height: auto;
-  gap: 2px;
-}
-
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"] > a {
+/* ---- Guests in the rail seat --------------------------------------------
+   Plugins add their entries to the host's settings row. The skin's seat is
+   the 48px rail column, cannot hold the account plus a wide action side by
+   side, and the host still reports `wide=true`, so entries arrive in their
+   wide shape. The skin folds every direct guest into one rail tile: natural
+   36px width, wrapping (a multi-icon group becomes a vertical pill), `order:
+   -1` above the account. Guest text moves into the accessibility tree, the
+   same way the rail treats its own tiles. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] > [data-slot="sidebar.settings"] > * > :not([data-slot]) {
   order: -1;
   flex: none;
-  box-sizing: border-box !important;
-  width: 36px !important;
-  min-width: 0 !important;
-  max-width: 36px !important;
-  height: 36px !important;
-  min-height: 0 !important;
-  max-height: 36px !important;
-  margin: 3px 0 !important;
-  padding: 0 !important;
-  overflow: clip !important;
-  white-space: nowrap !important;
-  border-radius: var(--isl-radius-md);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 36px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-/* An icon-bearing guest keeps its icon and moves any text to the
-   accessibility tree, the same way a footer guest does. */
-body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-trigger-row"] > a:has(svg, img) > span:not(:has(*)) {
+/* A launcher that replaces the account menu (dsh-quick-restart, DS-Bot) uses
+   flat class names the walker cannot mark, and the host still reports `wide`,
+   so it renders its name. The rail keeps the avatar: every leaf child after
+   the first moves into the accessibility tree. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="settings-area"] button[aria-haspopup] > :not(:first-child):not(:has(*)) {
   position: absolute !important;
   width: 1px !important;
   height: 1px !important;
