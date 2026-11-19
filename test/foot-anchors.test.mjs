@@ -120,11 +120,28 @@ test('the expanded footer is a wide seat at the bottom of the workspace', async 
   assert.match(seat, /grid-area: 5 \/ 2/u);
   assert.match(seat, /height: var\(--isl-footer-height, auto\)/u);
   assert.match(seat, /max-height: var\(--isl-footer-max/u);
-  assert.match(seat, /overflow: auto/u);
+  // A vertical stack: `wrap` would turn a tall guest into extra columns and
+  // push the other guests horizontally out of the island.
+  assert.match(seat, /flex-wrap: nowrap/u);
+  assert.match(seat, /overflow-x: hidden/u);
+  assert.match(seat, /overflow-y: auto/u);
+  // A 5px scrollbar inside the 227px seat is noise; the wheel still scrolls.
+  assert.match(seat, /scrollbar-width: none/u);
+  assert.match(css, /\[data-islands-part~="footer-actions"\]::-webkit-scrollbar \{[\s\S]*?width: 0/u);
   // The separation is a top gap (which also seats the handle), not a border.
   assert.match(seat, /padding: 20px 8px 8px/u);
-  assert.match(seat, /min-height: min\(200px, var\(--isl-footer-max/u);
+  // The floor is published by the controller as min(200px, content height);
+  // a fixed 200px floor would pad a short guest with blank space.
+  assert.match(seat, /min-height: var\(--isl-footer-min, 0px\)/u);
+  assert.doesNotMatch(seat, /min-height: min\(200px/u);
   assert.doesNotMatch(seat, /border-top/u);
+
+  // Direct guests are capped to the seat so none of them can widen it.
+  const guest = rule(css, `[data-islands-part~="footer-actions"] > *`, 'max-width: 100%');
+  assert.match(guest, /min-width: 0/u);
+  assert.match(guest, /max-width: 100%/u);
+  // A tall guest scrolls instead of being squashed by a fixed seat height.
+  assert.match(guest, /flex-shrink: 0/u);
 
   // The 1.2.2 tile normalization is now the collapsed rail's contract only.
   const tile = rule(
@@ -151,6 +168,7 @@ test('the workspace footer controller owns collapse, height and the handle', asy
   assert.match(source, /data-islands-footer-collapsed/u);
   assert.match(source, /data-islands-footer-empty/u);
   assert.match(source, /--isl-footer-height/u);
+  assert.match(source, /--isl-footer-min/u);
   assert.match(source, /--isl-footer-max/u);
   assert.match(source, /localStorage/u);
   assert.match(source, /pointerdown/u);

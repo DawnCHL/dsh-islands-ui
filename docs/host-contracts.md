@@ -61,10 +61,12 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 
 **容器由皮肤负责**（`src/host/footer.js`）：
 
-- 高度：`min-height: min(200px, max-height)`，默认自适应内容，`max-height` 为 `min(800px, 侧栏高 45%)`；矮窗口时下限自动让位给 45% 上限，不会压垮工作区。拖动 handle 上方 5px 的独立拖动条可在范围内调整，调整值写入 `localStorage`（`dsh-islands-ui:footer`），折叠/展开和下次打开窗口都按它恢复。
+- 高度：默认贴合内容（自然高度 = 20px 顶部留白 + 内容 + 8px 底部内距）。座位的 `min-height` 由皮肤发布为 `--isl-footer-min = min(200px, 内容自然高度)`（也受 45% 上限约束），所以短内容不会被撑到 200px，恢复的手动高度也不会裁掉后来变高的内容；拖拽下限使用同一个值。`max-height` 为 `min(800px, 侧栏高 45%)`，矮窗口时下限自动让位给上限，不会压垮工作区。拖动 handle 上方 5px 的独立拖动条可在范围内调整，调整值写入 `localStorage`（`dsh-islands-ui:footer`，带版本号），折叠/展开和下次打开窗口都按它恢复。旧版本写入的 200px 下限值（无法与“未拖拽”区分）在升级后一次性迁移为自适应；版本化之后的 200px 拖拽高度会保留。
+- 布局：footer 是 `flex-direction: column; flex-wrap: nowrap` 的纵向堆叠；直接访客 `min-width: 0; max-width: 100%; flex-shrink: 0`，横向溢出由座位裁掉。新增访客只会向下增加行，不会把原有内容横向挤出岛屿；内容超过座位高度时在内部纵向滚动，滚动条按左侧 rail 的方式隐藏。
+- 存储高度：内容不超过 200px 且存储值等于内容下限时按自适应处理（等价于贴合内容）；内容高于下限时，存储值在下限处保持固定高度并内部滚动，不会因为 `auto` 回弹到完整内容高度。内容只比固定高度多 16px 以内时按内容高度渲染，避免为一条缝隙显示滚动条。
 - handle 的 `aria-label` 跟随 `document.documentElement.lang`（zh → 底部栏，其他 → Footer），`aria-controls` 指向 footer 容器（无 id 时补 `isl-footer-seat`）；不设置 `title` 原生提示。
 - 折叠：底部 20px handle 条可点击收起/展开；收起时 footer 只保留这条，工作区恢复全高。默认展开。调整高度从 handle 上方 5px 的独立拖动条进行（悬停/拖动时显示强调色细条），按钮本身只负责点击，两者热区不重叠。
-- 滚动：内容超过当前高度时在 `footer-actions` 内滚动。
+- 滚动：内容超过当前高度时在 `footer-actions` 内滚动，滚动条按左侧 rail 的方式隐藏（`scrollbar-width: none`），滚轮/触控板仍可滚动。
 - 空态：槽位没有子项/文本时隐藏 footer 和 handle，工作区占满全高（presence-based；插件自己 `display:none` 的占位也算空）。
 - 分隔与 handle：footer 与工作区之间用 20px 顶部留白分隔（不用 `border`）；handle 是覆盖整行留白的白底遮罩条（hover/拖动时整行圆角高亮），滚动内容不会从按钮两侧露出；折叠时它作为岛屿底盖，水平保持与展开相同的 8px 内缩（宽度不跳变），仅垂直内缩 1px 让卡片底边框可见，底部圆角用内圆角 `calc(var(--isl-radius-lg) - 1px)`；窄屏抽屉下 footer 上移 `--isl-gap`。工作区折叠（`data-islands-workspace-collapsed`）时 footer 和 handle 一起隐藏。
 - 访客几何在 `settings-area` 轨道座位里统一归一化（36px tile）；`footer-actions` 仍然是宽座位，不改访客几何。
