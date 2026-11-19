@@ -3,6 +3,12 @@
    Trigger chip + model list + reasoning slider, in the Islands language.
    ========================================================================== */
 
+/* Mounted into the composer slot whether or not the skin is on; the base rule
+   keeps a raw chip out of the composer when the attribute is absent. */
+.isl-model {
+  display: none;
+}
+
 body[data-islands-ui] .isl-model {
   position: relative;
   display: flex;

@@ -4,7 +4,13 @@
    reorder it; right-click the rail to show or hide launchers.
    ========================================================================== */
 
-body[data-islands-ui] .isl-rail {
+/* Registered even while the skin is off; the base rule keeps the launchers
+   out of the page until the attribute says otherwise. */
+.isl-rail {
+  display: none;
+}
+
+.isl-railGhost {
   display: none;
 }
 
@@ -38,6 +44,12 @@ body[data-islands-ui] .isl-rail {
 body[data-islands-ui] .isl-rail::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+/* The settings seat on the sidebar foot renders a launcher into a host slot
+   with no skin wrapper, so the button hides itself when the skin is off. */
+.isl-railBtn {
+  display: none;
 }
 
 body[data-islands-ui] .isl-railBtn {

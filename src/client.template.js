@@ -18,6 +18,7 @@ window.__ModuleLoader__.load({
     /*__FOOTER_MODULE__*/
     /*__COLLAPSE_MODULE__*/
     /*__COMPAT_GATE_MODULE__*/
+    /*__YIELD_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -48,6 +49,9 @@ window.__ModuleLoader__.load({
     const compatListeners = new Set();
     /** Dismisses the compatibility toast while one is on screen. */
     let compatToastDismiss = null;
+    /** Runtime yield state; `active` until another participant wins the sidebar. */
+    let yieldState = { status: 'active', since: null, retries: 0 };
+    const yieldListeners = new Set();
 
     /** Copy for the preference row; the row is the only user-facing string. */
     const COPY = {
@@ -129,6 +133,17 @@ window.__ModuleLoader__.load({
         compatStructure: '侧栏结构',
         compatStructureFlat: '平铺',
         compatStructureScroll: '滚动容器',
+        yieldTitle: '皮肤已临时让位',
+        yieldBody:
+          '检测到其他插件或模式在反复收起侧栏，皮肤已暂停显示，避免双方互相打断。你的启用设置没有改变。',
+        yieldHint: '侧栏一旦稳定展开就会自动恢复；连续三次失败会询问你怎么处理。也可以立即重试。',
+        yieldRetry: '立即重试',
+        yieldDisable: '关闭皮肤',
+        yieldDismiss: '取消',
+        yieldSince: '发生于',
+        yieldToastTitle: 'Islands UI 主题没有生效',
+        yieldToastBody: '可能是其他插件影响，没有主题生效的条件，你可以关闭主题，或者立即再试一次。',
+        yieldMute: '不再提示',
         smoothCaret: '平滑输入光标',
         smoothCaretDesc: '仅作用于对话输入框：光标随文字平滑滑动，颜色跟随强调色；关闭后使用原生输入光标。',
         smoothCaretCompat: '当前 DSH 构建与平滑光标不兼容，已自动回退原生光标；此开关暂不可用。',
@@ -215,6 +230,17 @@ window.__ModuleLoader__.load({
         compatStructure: 'Sidebar structure',
         compatStructureFlat: 'flat',
         compatStructureScroll: 'scroll containers',
+        yieldTitle: 'Skin stepped aside',
+        yieldBody:
+          'Another plugin or mode keeps collapsing the sidebar, so the skin stopped drawing instead of trading it back and forth. Your enabled setting is unchanged.',
+        yieldHint: 'It comes back once the sidebar settles; after three failed attempts it asks you what to do. You can also retry now.',
+        yieldRetry: 'Try again',
+        yieldDisable: 'Turn skin off',
+        yieldDismiss: 'Cancel',
+        yieldSince: 'Since',
+        yieldToastTitle: 'The Islands UI theme is not applying',
+        yieldToastBody: 'Another plugin is probably in the way, so the theme has nothing to apply to. Turn the skin off, or try again now.',
+        yieldMute: "Don't ask again",
         smoothCaret: 'Smooth input caret',
         smoothCaretDesc:
           'Applies to the conversation composer: the caret glides between positions and follows the accent color; turn off to use the native caret.',
@@ -251,10 +277,24 @@ window.__ModuleLoader__.load({
 
     let enabled = readStored();
 
+    /**
+     * Set while the yield guard has stood the skin down: the host sidebar is
+     * being collapsed by someone else faster than the skin can restore it, and
+     * keeping the skin on would turn that into a fight. The user's preference
+     * (`enabled`) is untouched; only the attribute and the host writes stop.
+     */
+    let skinSuspended = false;
+    /** Filled by the conversion effect so the settings page can ask for a retry. */
+    let yieldRetry = null;
+    /** Dismisses the yield prompt while one is on screen. */
+    let yieldToastDismiss = null;
+    /** "Don't ask again" — session only, never persisted, gone on reload. */
+    let yieldPromptMuted = false;
+
     function syncAttribute() {
       const body = document.body;
       if (body === null) return;
-      if (enabled) {
+      if (enabled && !skinSuspended) {
         body.setAttribute(ATTRIBUTE, '');
         // Desktop colours the Windows caption buttons from a probe that reads
         // --dsw-specific-sidebar-fill. Its observer watches body's style and
@@ -335,6 +375,24 @@ window.__ModuleLoader__.load({
 
     function useCompat() {
       return React.useSyncExternalStore(subscribeCompat, getCompatSnapshot);
+    }
+
+    function setYieldState(next) {
+      yieldState = next;
+      for (const listener of yieldListeners) listener();
+    }
+
+    function subscribeYield(listener) {
+      yieldListeners.add(listener);
+      return () => yieldListeners.delete(listener);
+    }
+
+    function getYieldSnapshot() {
+      return yieldState;
+    }
+
+    function useYield() {
+      return React.useSyncExternalStore(subscribeYield, getYieldSnapshot);
     }
 
     /** The smooth caret keeps its own compatibility state; see src/host/caret.js. */
@@ -2642,10 +2700,151 @@ window.__ModuleLoader__.load({
       host.classList.add('is-visible');
     }
 
+    /**
+     * The yield prompt: three failed attempts mean the other side is not going
+     * to give way on its own, so the user picks a side. Plain DOM like the
+     * compatibility toast — the skin is off while this shows, so none of its
+     * React chrome is mounted.
+     */
+    function showYieldToast() {
+      if (document.body === null || yieldToastDismiss !== null) return;
+      const copy = currentCopy();
+      const host = document.createElement('div');
+      host.className = 'isl-yieldToast';
+      host.setAttribute('role', 'alertdialog');
+      host.setAttribute('aria-live', 'assertive');
+
+      const body = document.createElement('div');
+      body.className = 'isl-yieldToastBody';
+      const title = document.createElement('div');
+      title.className = 'isl-yieldToastTitle';
+      title.textContent = copy.yieldToastTitle;
+      const text = document.createElement('div');
+      text.className = 'isl-yieldToastText';
+      text.textContent = copy.yieldToastBody;
+
+      const actions = document.createElement('div');
+      actions.className = 'isl-yieldToastActions';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'isl-yieldToastPrimary';
+      retry.textContent = copy.yieldRetry;
+      const disable = document.createElement('button');
+      disable.type = 'button';
+      disable.className = 'isl-yieldToastAction';
+      disable.textContent = copy.yieldDisable;
+
+      // Session-only: the flag lives in memory, so closing or reloading DSH
+      // brings the prompt back. Ticking it takes effect immediately.
+      const mute = document.createElement('label');
+      mute.className = 'isl-yieldToastMute';
+      const muteBox = document.createElement('input');
+      muteBox.type = 'checkbox';
+      muteBox.checked = yieldPromptMuted;
+      muteBox.addEventListener('change', () => { yieldPromptMuted = muteBox.checked; });
+      const muteText = document.createElement('span');
+      muteText.textContent = copy.yieldMute;
+      mute.append(muteBox, muteText);
+
+      actions.append(retry, disable, mute);
+
+      body.append(title, text, actions);
+
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'isl-compatToastClose';
+      close.setAttribute('aria-label', copy.yieldDismiss);
+      close.textContent = '\u00d7';
+
+      // Auto-close after eight seconds, drawn as a bar draining along the top
+      // edge of the prompt — no number, and nothing round competing with the
+      // buttons for attention. Closing this way is the same as cancelling:
+      // nothing was chosen, so nothing changes.
+      const COUNTDOWN_MS = 8000;
+      const timebar = document.createElement('span');
+      timebar.className = 'isl-yieldToastTimebar';
+      timebar.setAttribute('aria-hidden', 'true');
+
+      // The bar is drained by a CSS animation, not by JavaScript: a transform
+      // animation runs on the compositor at display refresh rate, while a timer
+      // loop can only manage a handful of visible steps per second and stalls
+      // whenever the main thread is busy. JavaScript keeps only the deadline, so
+      // the prompt still closes on time if the animation is throttled.
+      let deadline = performance.now() + COUNTDOWN_MS;
+      let expiry = null;
+      let hiddenAt = null;
+
+      function clearExpiry() {
+        if (expiry !== null) window.clearTimeout(expiry);
+        expiry = null;
+      }
+
+      function armExpiry() {
+        clearExpiry();
+        expiry = window.setTimeout(() => dismiss(), Math.max(0, deadline - performance.now()));
+      }
+
+      function startCountdown() {
+        // A hidden window pauses compositing and throttles timers; freeze both
+        // clocks and shift the deadline by the time spent away, so the bar
+        // resumes exactly where it stopped.
+        if (document.visibilityState === 'hidden') {
+          if (hiddenAt === null) hiddenAt = performance.now();
+          return;
+        }
+        if (hiddenAt !== null) {
+          deadline += performance.now() - hiddenAt;
+          hiddenAt = null;
+        }
+        host.classList.add('is-counting');
+        host.classList.remove('is-paused');
+        armExpiry();
+      }
+
+      function onVisibility() {
+        if (document.visibilityState === 'hidden') {
+          clearExpiry();
+          if (hiddenAt === null) hiddenAt = performance.now();
+          host.classList.add('is-paused');
+          return;
+        }
+        startCountdown();
+      }
+
+      const dismiss = () => {
+        if (yieldToastDismiss !== dismiss) return;
+        yieldToastDismiss = null;
+        clearExpiry();
+        document.removeEventListener('visibilitychange', onVisibility);
+        host.classList.remove('is-visible');
+        window.setTimeout(() => host.remove(), 200);
+      };
+      yieldToastDismiss = dismiss;
+      document.addEventListener('visibilitychange', onVisibility);
+
+      // A retry that the guard refuses (the sidebar is still collapsed) keeps
+      // the prompt: silently swallowing the click would look like a dead button.
+      retry.addEventListener('click', () => {
+        if (yieldRetry?.()) dismiss();
+      });
+      disable.addEventListener('click', () => {
+        setEnabled(false);
+        dismiss();
+      });
+      close.addEventListener('click', dismiss);
+
+      host.append(timebar, body, close);
+      document.body.append(host);
+      void host.offsetWidth;
+      host.classList.add('is-visible');
+      startCountdown();
+    }
+
     /** Islands settings page: skin switch + accent color. */
     function IslandsSettingsPage() {
       const on = useEnabled();
       const compat = useCompat();
+      const yielded = useYield();
       const caretCompat = useCaretCompat();
       const lang = useLocale() ?? 'en';
       const copy = String(lang).toLowerCase().startsWith('zh') ? COPY.zh : COPY.en;
@@ -2722,6 +2921,37 @@ window.__ModuleLoader__.load({
             h('span', { className: 'isl-switchThumb' }),
           ),
         ),
+        // Only worth explaining while the skin is still wanted: a user who
+        // turned it off themselves should not be told it stepped aside.
+        on && yielded.status === 'yielded'
+          ? h(
+              'div',
+              { className: 'isl-prefRow isl-yieldRow' },
+              h(
+                'div',
+                { className: 'isl-prefText' },
+                h('div', { className: 'isl-prefTitle' }, copy.yieldTitle),
+                h('div', { className: 'isl-prefDesc' }, copy.yieldBody),
+                h(
+                  'div',
+                  { className: 'isl-prefWarn' },
+                  copy.yieldHint,
+                  typeof yielded.since === 'number'
+                    ? ` · ${copy.yieldSince} ${new Date(yielded.since).toLocaleTimeString()}`
+                    : '',
+                ),
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'isl-yieldAction',
+                  onClick: () => yieldRetry?.(),
+                },
+                copy.yieldRetry,
+              ),
+            )
+          : null,
         h(
           'div',
           { className: 'isl-prefRow' },
@@ -3047,15 +3277,53 @@ window.__ModuleLoader__.load({
           // collapses always HIDE the workspace (never toggle it), so a user
           // who collapsed the workspace does not get it flipped back open by a
           // resize. `hostCollapseAction` owns that decision and is unit tested.
+          //
+          // Another participant can own the shell as well: a plugin that wants
+          // the sidebar collapsed asks the host for it and answers every restore
+          // with another collapse. Converting those turns two plugins into one
+          // loop — measured at about one round a second against ds-bot's Bot
+          // mode on 0.2.2-rc.5 — so the counter that decides when to stand down
+          // sits on this same synchronous path. A timer would never run if the
+          // loop closed inside a single task. `createYieldGuard` owns that call.
           ctx.effect(() => {
             let observer;
             let timer;
             let resizedAt = 0;
+
+            const guard = createYieldGuard({
+              schedule: (run, ms) => window.setTimeout(run, ms),
+              cancel: (id) => window.clearTimeout(id),
+              apply: (active) => {
+                // Standing down hands the host back untouched; returning
+                // re-applies the attribute the components and styles read.
+                skinSuspended = !active;
+                syncAttribute();
+              },
+              read: () => document.querySelector(FRAME)?.hasAttribute('data-sidebar-collapsed') === true,
+              isHidden: () => document.visibilityState === 'hidden',
+              onChange: (state) => setYieldState(state),
+              onPrompt: () => {
+                if (!yieldPromptMuted) showYieldToast();
+              },
+            });
+            yieldRetry = () => guard.retry(Date.now());
+
             const onResize = () => { resizedAt = Date.now(); };
+            const onVisibility = () => {
+              resizedAt = Date.now();
+              guard.wake(Date.now());
+            };
             window.addEventListener('resize', onResize);
+            document.addEventListener('visibilitychange', onVisibility);
+
             const fix = () => {
               const frame = document.querySelector(FRAME);
               if (frame === null) return;
+              const collapsed = frame.hasAttribute('data-sidebar-collapsed');
+              // The guard sees every observation, including the ones it answers
+              // with `skip`: while stood down it is the only thing watching for
+              // the moment the sidebar stays expanded again.
+              if (guard.observe(collapsed, Date.now()) !== 'convert') return;
               const action = hostCollapseAction({
                 skinEnabled: document.body.hasAttribute(ATTRIBUTE),
                 drawer: frame.hasAttribute('data-sidebar-drawer'),
@@ -3070,7 +3338,6 @@ window.__ModuleLoader__.load({
                 setWorkspaceCollapsed(false);
                 return;
               }
-              if (!frame.hasAttribute('data-sidebar-collapsed')) return;
               setWorkspaceCollapsed(action === 'collapse');
               layoutService?.toggleSidebar();
             };
@@ -3090,8 +3357,11 @@ window.__ModuleLoader__.load({
             attach();
             return () => {
               window.clearTimeout(timer);
+              guard.stop();
+              yieldRetry = null;
               observer?.disconnect();
               window.removeEventListener('resize', onResize);
+              document.removeEventListener('visibilitychange', onVisibility);
             };
           }, 'dsh-islands-ui: native collapse conversion');
 

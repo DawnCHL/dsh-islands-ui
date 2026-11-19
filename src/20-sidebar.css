@@ -279,6 +279,10 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
    mask over the footer's top gap. It is portalled to <body> so React never
    reconciles it away and the footer's own scroll clip cannot cut it. */
 .isl-footerHandle {
+  display: none;
+}
+
+body[data-islands-ui] .isl-footerHandle {
   position: fixed;
   z-index: 30;
   box-sizing: border-box;
@@ -319,8 +323,13 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
 /* The resize strip sits 5px ABOVE the bar, outside the button's hit area, so
    the click target and the height-drag target never overlap. */
 .isl-footerResize {
+  display: none;
+}
+
+body[data-islands-ui] .isl-footerResize {
   position: fixed;
   z-index: 30;
+  display: block;
   height: 5px;
   margin: 0;
   padding: 0;
@@ -717,8 +726,12 @@ html[data-windows-titlebar] body[data-islands-ui] [data-islands-part~="sidebar-r
 
 /* ---- Aggregate pinned sessions ------------------------------------------ */
 .isl-pinnedHost {
-  display: block;
+  display: none;
   flex: none;
+}
+
+body[data-islands-ui] .isl-pinnedHost {
+  display: block;
 }
 
 .isl-pinned {
