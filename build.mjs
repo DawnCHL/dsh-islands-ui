@@ -58,6 +58,12 @@ const collapseModule = collapse.replace(/^export\s+/gmu, '').trim();
 const compatGate = await readFile(join(srcDir, 'host', 'compat-gate.js'), 'utf8');
 const compatGateModule = compatGate.replace(/^export\s+/gmu, '').trim();
 
+// The runtime yield guard is another injected state machine: it decides when
+// the skin has to stop contesting the host sidebar with another plugin, and
+// when it may come back.
+const yieldGuard = await readFile(join(srcDir, 'host', 'yield.js'), 'utf8');
+const yieldGuardModule = yieldGuard.replace(/^export\s+/gmu, '').trim();
+
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 if (!template.includes('/*__HOST_RUNTIME__*/')) {
@@ -78,6 +84,9 @@ if (!template.includes('/*__COLLAPSE_MODULE__*/')) {
 if (!template.includes('/*__COMPAT_GATE_MODULE__*/')) {
   throw new Error('client.template.js lost its compatibility-gate placeholder');
 }
+if (!template.includes('/*__YIELD_MODULE__*/')) {
+  throw new Error('client.template.js lost its yield-guard placeholder');
+}
 const built = template
   .replace('/*__HOST_RUNTIME__*/', () => hostRuntime)
   .replace('/*__CARET_MODULE__*/', () => caretModule)
@@ -85,8 +94,9 @@ const built = template
   .replace('/*__FOOTER_MODULE__*/', () => footerModule)
   .replace('/*__COLLAPSE_MODULE__*/', () => collapseModule)
   .replace('/*__COMPAT_GATE_MODULE__*/', () => compatGateModule)
+  .replace('/*__YIELD_MODULE__*/', () => yieldGuardModule)
   .replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
-const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length + footerModule.length + collapseModule.length + compatGateModule.length} bytes of CSS, host bridge and controllers`;
+const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length + footerModule.length + collapseModule.length + compatGateModule.length + yieldGuardModule.length} bytes of CSS, host bridge and controllers`;
 
 if (process.argv.includes('--check')) {
   let current = '';

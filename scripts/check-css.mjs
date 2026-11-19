@@ -3,8 +3,15 @@
  *
  * A rule that touches the host must be scoped to the skin, may only match a
  * host contract or a skin part, and may not name a hashed class or a class
- * substring. Skin-only rules (`.isl-*`) stay unscoped because the components
- * that carry them are mounted only while the skin is on.
+ * substring.
+ *
+ * Skin-only rules (`.isl-*`) stay unscoped — but only for the base pass. The
+ * components stay mounted after the skin is switched off at runtime (the gate
+ * only skips them on a cold start), so anything the skin injects into a host
+ * slot needs `display: none` outside `body[data-islands-ui]`; the scoped rules
+ * turn it back on. Skipping that base rule leaves a raw button in the page,
+ * which is how the rail, the composer model chip and the footer handles used
+ * to leak.
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
