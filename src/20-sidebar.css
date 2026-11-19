@@ -261,6 +261,9 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  /* The seat is a vertical stack. `wrap` would turn a vertical overflow into
+     extra columns to the right, pushing the other guests out of the island. */
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: 6px;
   width: 100%;
@@ -268,11 +271,35 @@ body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part
   margin: 0;
   /* The top gap is the click bar's seat. No border: the gap is the separator. */
   padding: 20px 8px 8px;
-  min-height: min(200px, var(--isl-footer-max, 800px));
+  /* The controller publishes the floor: min(200px, natural content height).
+     A short guest therefore keeps the seat at its own height instead of
+     carrying blank space, while a restored height can never clip content. */
+  min-height: var(--isl-footer-min, 0px);
   height: var(--isl-footer-height, auto);
   max-height: var(--isl-footer-max, 800px);
-  overflow: auto;
+  /* Vertical overflow stays inside the seat; a guest that is wider than the
+     island must wrap or scroll inside itself, never widen the footer. The
+     scrollbar is hidden like the rail's: a 5px bar inside a 227px seat is
+     visual noise, and the wheel/trackpad still scrolls. */
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Direct guests are flex items of that column. Cap their width so a guest with
+   its own intrinsic width cannot push its siblings out of the island, and keep
+   their height: a guest taller than the seat should scroll, not be squashed. */
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > [data-slot="sidebar.footer.action"] > *,
+body[data-islands-ui] [data-islands-part~="sidebar-root"]:not([data-islands-part~="sidebar-collapsed"]) [data-islands-part~="footer-actions"] > * {
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
 }
 
 /* The click bar is the skin's affordance for collapse/expand and the opaque

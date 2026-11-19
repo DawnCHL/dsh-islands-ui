@@ -24,16 +24,21 @@
 const FOOTER_SEAT_SELECTOR = '[data-islands-part~="footer-actions"]';
 /** The host's outlet wrapper inside that seat. */
 const FOOTER_SLOT_SELECTOR = '[data-slot="sidebar.footer.action"]';
-/** Persisted `{ collapsed, height }`. */
+/** Persisted `{ v, collapsed, height }`. */
 const FOOTER_STORAGE_KEY = 'dsh-islands-ui:footer';
+/** Bumped when the stored shape or its meaning changes. */
+const FOOTER_STATE_VERSION = 2;
 const FOOTER_COLLAPSED_ATTR = 'data-islands-footer-collapsed';
 const FOOTER_EMPTY_ATTR = 'data-islands-footer-empty';
 const FOOTER_HEIGHT_PROPERTY = '--isl-footer-height';
+const FOOTER_MIN_PROPERTY = '--isl-footer-min';
 const FOOTER_MAX_PROPERTY = '--isl-footer-max';
 const FOOTER_HANDLE_CLASS = 'isl-footerHandle';
 const FOOTER_RESIZE_CLASS = 'isl-footerResize';
-/** The expanded seat keeps this much room even when its content is short. */
+/** Comfort baseline; a shorter guest keeps only its own height. */
 const FOOTER_MIN_HEIGHT = 200;
+/** A scrollbar for a few px of content is noise; grow to the content instead. */
+const FOOTER_SLIVER_PX = 16;
 /** Absolute cap; also capped to a share of the sidebar height. */
 const FOOTER_MAX_PX = 800;
 const FOOTER_MAX_SHARE = 0.45;
@@ -42,15 +47,32 @@ const FOOTER_RESIZE_STRIP = 5;
 /** Must match `.isl-footerHandle { height }`. */
 const FOOTER_HANDLE_HEIGHT = 20;
 
+/**
+ * The height stored by a previous session. 1.2.x persisted the 200px drag
+ * floor whenever a drag ended there; that value cannot be told apart from
+ * "never dragged", and it is exactly what keeps a short footer padded to
+ * 200px. Normalize it away once. A versioned 200px is a deliberate choice and
+ * survives a reload.
+ */
+export function footerStoredHeight(parsed) {
+  const height = Number.isFinite(parsed?.height) ? Number(parsed.height) : null;
+  if (parsed?.v !== FOOTER_STATE_VERSION && height !== null && height <= FOOTER_MIN_HEIGHT) {
+    return null;
+  }
+  return height;
+}
+
 function readFooterState() {
   try {
     const raw = window.localStorage.getItem(FOOTER_STORAGE_KEY);
     if (raw === null) return { collapsed: false, height: null };
     const parsed = JSON.parse(raw);
-    return {
-      collapsed: parsed?.collapsed === true,
-      height: Number.isFinite(parsed?.height) ? Number(parsed.height) : null,
-    };
+    const collapsed = parsed?.collapsed === true;
+    const height = footerStoredHeight(parsed);
+    const state = { collapsed, height };
+    // Stamp the current version so a later, deliberate 200px drag survives.
+    if (parsed?.v !== FOOTER_STATE_VERSION) writeFooterState(state);
+    return state;
   } catch {
     return { collapsed: false, height: null };
   }
@@ -58,7 +80,10 @@ function readFooterState() {
 
 function writeFooterState(state) {
   try {
-    window.localStorage.setItem(FOOTER_STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(
+      FOOTER_STORAGE_KEY,
+      JSON.stringify({ v: FOOTER_STATE_VERSION, collapsed: state.collapsed, height: state.height }),
+    );
   } catch {
     /* private mode / quota: the state simply does not survive the reload */
   }
@@ -75,13 +100,50 @@ export function footerMaxHeight(sidebarHeight) {
 }
 
 /**
- * Clamp a requested footer height. The 200px floor yields to the cap on short
+ * The effective floor of the expanded seat: the 200px comfort baseline, or the
+ * content's own natural height when that is shorter. The natural height already
+ * contains the 20px click-bar gap and the 8px bottom inset, so a short guest
+ * never gets padded with blank space. The cap wins on short sidebars.
+ */
+export function footerMinHeight(contentHeight, sidebarHeight) {
+  const cap = footerMaxHeight(sidebarHeight);
+  const natural = contentHeight > 0 ? contentHeight : FOOTER_MIN_HEIGHT;
+  return Math.min(FOOTER_MIN_HEIGHT, natural, cap);
+}
+
+/**
+ * Clamp a requested footer height. The floor follows the content
+ * (`footerMinHeight`), so dragging can never squash a short footer into the
+ * old fixed 200px, and the 200px floor still yields to the cap on short
  * sidebars so the workspace is not crushed.
  */
-export function clampFooterHeight(value, sidebarHeight) {
+export function clampFooterHeight(value, sidebarHeight, contentHeight = FOOTER_MIN_HEIGHT) {
   const cap = footerMaxHeight(sidebarHeight);
-  const floor = Math.min(FOOTER_MIN_HEIGHT, cap);
+  const floor = footerMinHeight(contentHeight, sidebarHeight);
   return Math.min(Math.max(value, floor), cap);
+}
+
+/**
+ * The fixed height to publish, or `null` for `auto`.
+ *
+ * A stored height at the content floor is redundant when `auto` already equals
+ * the content (a short guest). But when the content is taller than the floor
+ * (the 200px baseline or the 45% cap), `auto` means the full content height:
+ * keeping the fixed floor is what stops a bottom drag from snapping back to
+ * the full content.
+ */
+export function footerRenderedHeight(storedHeight, naturalHeight, sidebarHeight) {
+  if (storedHeight === null) return null;
+  const cap = footerMaxHeight(sidebarHeight);
+  const floor = footerMinHeight(naturalHeight, sidebarHeight);
+  if (floor >= naturalHeight && storedHeight <= floor) return null;
+  const clamped = Math.ceil(clampFooterHeight(storedHeight, sidebarHeight, naturalHeight));
+  // A scrollbar for a sliver of the last guest is just noise. Unless the cap
+  // itself forces the scroll, grow to the content when the overflow is small.
+  if (clamped < naturalHeight && naturalHeight <= cap && naturalHeight - clamped <= FOOTER_SLIVER_PX) {
+    return Math.ceil(naturalHeight);
+  }
+  return clamped;
 }
 
 /**
@@ -113,8 +175,55 @@ export function installFooterPanel() {
     return root?.getBoundingClientRect().height ?? 0;
   };
 
-  const maxHeight = () => footerMaxHeight(rootHeight());
-  const clampHeight = (value) => clampFooterHeight(value, rootHeight());
+  /**
+   * The seat's natural height: flow content plus the seat's own vertical
+   * padding and row gap. `sidebar.footer.action` is `display: contents`, so its
+   * guests are the seat's flex items; recurse through such wrappers instead of
+   * reading their zero-height box. Only called when a height has to be clamped
+   * (a restored height or the start of a drag), never per frame.
+   */
+  const measureNatural = () => {
+    if (seat === null) return FOOTER_MIN_HEIGHT;
+    const style = getComputedStyle(seat);
+    const rowGap = parseFloat(style.rowGap) || 0;
+    let total = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+    let items = 0;
+    const visit = (element) => {
+      const childStyle = getComputedStyle(element);
+      if (childStyle.display === 'none') return;
+      if (childStyle.position === 'absolute' || childStyle.position === 'fixed') return;
+      if (childStyle.display === 'contents') {
+        for (const child of element.children) visit(child);
+        return;
+      }
+      total +=
+        element.getBoundingClientRect().height +
+        (parseFloat(childStyle.marginTop) || 0) +
+        (parseFloat(childStyle.marginBottom) || 0);
+      items += 1;
+    };
+    const root = seat.querySelector(FOOTER_SLOT_SELECTOR) ?? seat;
+    for (const child of root.children) visit(child);
+    return total + rowGap * Math.max(0, items - 1);
+  };
+
+  /** Natural height, reusing the drag-start measurement during a gesture. */
+  const naturalHeight = () => (drag === null ? measureNatural() : drag.content);
+
+  const clampHeight = (value, natural = naturalHeight()) =>
+    clampFooterHeight(value, rootHeight(), natural);
+
+  /**
+   * Publish the CSS floor. Re-measuring during a drag would read layout every
+   * pointer move, so the gesture reuses the height captured at drag start.
+   * Returns the unrounded floor so `publish` can tell a meaningful stored
+   * height from one that merely sits at the content floor.
+   */
+  const publishMin = (natural = naturalHeight(), sidebar = rootHeight()) => {
+    const floor = footerMinHeight(natural, sidebar);
+    body.style.setProperty(FOOTER_MIN_PROPERTY, `${Math.ceil(floor)}px`);
+    return floor;
+  };
 
   /** The footer is hidden when the sidebar is in its collapsed rail. */
   const onRail = () =>
@@ -168,9 +277,13 @@ export function installFooterPanel() {
 
   const publish = () => {
     body.toggleAttribute(FOOTER_COLLAPSED_ATTR, state.collapsed);
-    body.style.setProperty(FOOTER_MAX_PROPERTY, `${maxHeight()}px`);
-    if (state.height === null) body.style.removeProperty(FOOTER_HEIGHT_PROPERTY);
-    else body.style.setProperty(FOOTER_HEIGHT_PROPERTY, `${Math.round(clampHeight(state.height))}px`);
+    const natural = naturalHeight();
+    const sidebar = rootHeight();
+    publishMin(natural, sidebar);
+    body.style.setProperty(FOOTER_MAX_PROPERTY, `${footerMaxHeight(sidebar)}px`);
+    const rendered = footerRenderedHeight(state.height, natural, sidebar);
+    if (rendered === null) body.style.removeProperty(FOOTER_HEIGHT_PROPERTY);
+    else body.style.setProperty(FOOTER_HEIGHT_PROPERTY, `${rendered}px`);
     if (handle !== null) {
       handle.setAttribute('aria-expanded', state.collapsed ? 'false' : 'true');
       handle.setAttribute('aria-label', footerLabel());
@@ -208,8 +321,13 @@ export function installFooterPanel() {
 
   const updateEmpty = () => {
     emptyFrame = 0;
+    // Toggle first: a hidden seat measures as zero, so removing the empty
+    // marker before measuring is what lets a newly mounted guest report its
+    // real height.
     body.toggleAttribute(FOOTER_EMPTY_ATTR, !hasContent());
-    schedulePlace();
+    // Publish, not just the floor: the rendered height also follows content
+    // changes (a sliver may grow, a shrunk guest may reveal a stored height).
+    publish();
   };
 
   const scheduleEmpty = () => {
@@ -228,7 +346,14 @@ export function installFooterPanel() {
 
   const onResizeDown = (event) => {
     if (event.button !== 0 || seat === null) return;
-    drag = { id: event.pointerId, startY: event.clientY, startHeight: seatHeight() };
+    // Measure once for the whole gesture: the drag floor follows the content,
+    // so a short footer can be pulled back down to its own height.
+    drag = {
+      id: event.pointerId,
+      startY: event.clientY,
+      startHeight: seatHeight(),
+      content: measureNatural(),
+    };
     resize.classList.add('is-dragging');
     handle?.classList.add('is-dragging');
     resize.setPointerCapture?.(event.pointerId);
@@ -377,6 +502,7 @@ export function installFooterPanel() {
     body.removeAttribute(FOOTER_COLLAPSED_ATTR);
     body.removeAttribute(FOOTER_EMPTY_ATTR);
     body.style.removeProperty(FOOTER_HEIGHT_PROPERTY);
+    body.style.removeProperty(FOOTER_MIN_PROPERTY);
     body.style.removeProperty(FOOTER_MAX_PROPERTY);
   };
 }
