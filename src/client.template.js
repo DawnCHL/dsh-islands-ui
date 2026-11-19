@@ -17,6 +17,7 @@ window.__ModuleLoader__.load({
     /*__FOOT_MODULE__*/
     /*__FOOTER_MODULE__*/
     /*__COLLAPSE_MODULE__*/
+    /*__COMPAT_GATE_MODULE__*/
     const CSS = '__ISLANDS_CSS__';
 
     const ATTRIBUTE = SKIN_ATTR;
@@ -34,10 +35,7 @@ window.__ModuleLoader__.load({
     const CORE_CONTRACTS = [HOST.ROOT_SLOT, HOST.SIDEBAR_SLOT];
     const CORE_PARTS = ['layout-frame', 'center-column', 'sidebar-root'];
     const FRAME = partSelector('layout-frame');
-    /** No shell content at all after this long: the build is unusable. */
-    const COMPAT_TIMEOUT_MS = 6000;
-    /** Content mounted but the frame anchor never showed up: rename, not slowness. */
-    const COMPAT_CONTENT_GRACE_MS = 1200;
+
     let animateTimer;
     let skinRegistrar = null;
     let publishRightbarWidth = null;
@@ -48,6 +46,8 @@ window.__ModuleLoader__.load({
     let styleTag = null;
     let compatState = { status: 'checking', missing: [], forced: false, version: null, structure: 'unknown' };
     const compatListeners = new Set();
+    /** Dismisses the compatibility toast while one is on screen. */
+    let compatToastDismiss = null;
 
     /** Copy for the preference row; the row is the only user-facing string. */
     const COPY = {
@@ -90,6 +90,7 @@ window.__ModuleLoader__.load({
         updateAvailable: '发现新版本 {version}',
         updateAvailablePlain: '发现新版本',
         updateDownloading: '正在下载更新 {percent}%',
+        updateDownloadingPlain: '正在下载更新',
         updateDownloadingDetail: '正在下载更新：{percent}%\n目标版本：{version}',
         updateVerifying: '正在校验更新文件…',
         updateInstalling: '正在准备重启…',
@@ -113,14 +114,6 @@ window.__ModuleLoader__.load({
         updateConfigChannel: '更新已暂停：channel 只能是 nightly 或 stable',
         updateConfigCleanup: '更新已暂停：无法清理旧更新，请重启应用',
         updateConfigGeneric: '更新已暂停：配置不可用',
-        updateShowcaseTitle: '更新按钮状态',
-        updateShowcaseDesc: '桌面端设置齿轮上方的更新入口在各阶段的外观；没有可用更新时按钮隐藏。',
-        updateStateAvailable: '发现新版本',
-        updateStateDownloading: '下载中',
-        updateStateVerifying: '校验中',
-        updateStateInstalling: '准备重启',
-        updateStateReady: '安装并重启',
-        updateStateError: '更新失败',
         compatTitle: 'Islands UI 已自动关闭',
         compatBody: '当前 DSH 构建的界面结构与插件不匹配，皮肤已回退到默认外观，以免出现双栏重叠或控件遮挡。',
         compatView: '查看插件设置',
@@ -181,6 +174,7 @@ window.__ModuleLoader__.load({
         updateAvailable: 'Update {version} available',
         updateAvailablePlain: 'Update available',
         updateDownloading: 'Downloading update {percent}%',
+        updateDownloadingPlain: 'Downloading update',
         updateDownloadingDetail: 'Downloading update: {percent}%\nTarget version: {version}',
         updateVerifying: 'Verifying update files…',
         updateInstalling: 'Preparing to restart…',
@@ -204,15 +198,6 @@ window.__ModuleLoader__.load({
         updateConfigChannel: 'Updates paused: channel must be nightly or stable',
         updateConfigCleanup: 'Updates paused: cannot discard previous update; restart the app',
         updateConfigGeneric: 'Updates paused: configuration unavailable',
-        updateShowcaseTitle: 'Update button states',
-        updateShowcaseDesc:
-          'How the desktop update entry above the settings gear looks in each phase. It is hidden when no update is available.',
-        updateStateAvailable: 'Update available',
-        updateStateDownloading: 'Downloading',
-        updateStateVerifying: 'Verifying',
-        updateStateInstalling: 'Preparing restart',
-        updateStateReady: 'Install and restart',
-        updateStateError: 'Update failed',
         compatTitle: 'Islands UI turned itself off',
         compatBody:
           'This DSH build no longer matches the plugin, so the skin fell back to the default look instead of overlapping panels.',
@@ -521,68 +506,86 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function DownloadGlyph() {
+    function DownloadGlyph({ size = 16 }) {
       return h(
         'svg',
-        { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M10 3.4v8.2', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' }),
         h('path', { d: 'm6.7 8.7 3.3 3.3 3.3-3.3', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' }),
         h('path', { d: 'M4.5 15.6h11', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' }),
       );
     }
 
-    function RestartGlyph() {
+    function RestartGlyph({ size = 16 }) {
       return h(
         'svg',
-        { width: 18, height: 18, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M16.4 8.1A6.5 6.5 0 1 0 16.4 12', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }),
         h('path', { d: 'M16.4 3.9v4.2h-4.2', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }),
       );
     }
 
-    function DotMatrixGlyph({ variant }) {
-      const rings = [2, 1, 2, 1, 0, 1, 2, 1, 2];
-      const smiley = new Set([0, 2, 7]);
-      // Windows for the 720 ms smiley rotation: each cell is lit for one or
-      // two 180 ms phases; the first cell wraps across the cycle boundary.
-      const phases = [
-        { span: 'wrap', delay: 0 },
-        { span: 1, delay: 360 },
-        { span: 2, delay: 0 },
-        { span: 1, delay: 180 },
-        { span: null, delay: 0 },
-        { span: 1, delay: 540 },
-        { span: 2, delay: 360 },
-        { span: 1, delay: 0 },
-        { span: 2, delay: 180 },
-      ];
+    function CheckGlyph({ size = 16 }) {
       return h(
-        'span',
-        { className: `isl-dmx isl-dmx-${variant}`, 'aria-hidden': true },
-        Array.from({ length: 9 }, (_, index) =>
-          h('span', {
-            key: index,
-            className: 'isl-dmx-dot',
-            'data-col': index % 3,
-            'data-ring': rings[index],
-            'data-on': smiley.has(index) ? '1' : '0',
-            'data-span': variant === 'smiley' ? phases[index].span ?? undefined : undefined,
-            style:
-              variant === 'smiley'
-                ? { animationDelay: `${phases[index].delay}ms` }
-                : { '--dmx-col': index % 3, '--dmx-ring': rings[index] },
-          }),
-        ),
+        'svg',
+        { width: size, height: size, viewBox: '0 0 20 20', fill: 'none', 'aria-hidden': true },
+        h('path', {
+          d: 'm5.4 10.5 3.1 3.1 6.1-6.8',
+          stroke: 'currentColor',
+          strokeWidth: 1.8,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
       );
     }
 
-    /** Shared face for the live rail button and the settings showcase. */
-    function UpdateGlyph({ phase }) {
-      if (phase === 'available') return h(DownloadGlyph);
-      if (phase === 'ready' || phase === 'error') return h(RestartGlyph);
-      if (phase === 'downloading') return h(DotMatrixGlyph, { variant: 'column' });
-      if (phase === 'verifying') return h(DotMatrixGlyph, { variant: 'smiley' });
-      return h(DotMatrixGlyph, { variant: 'ripple' });
+    /** Clamped download percentage, or null when the host reported none. */
+    function updatePercent(state) {
+      const raw = Number(state?.percent);
+      if (!Number.isFinite(raw)) return null;
+      return Math.max(0, Math.min(100, Math.round(raw)));
+    }
+
+    /**
+     * Progress ring drawn inside the disc edge. `downloading` is determinate:
+     * the circle carries `pathLength="100"`, so the dash is a percentage and
+     * the CSS transition smooths the steps. The other busy phases have no
+     * numbers to show, so the same ring sweeps instead — steady while files
+     * are verified, faster and breathing while the app prepares to restart.
+     */
+    function UpdateRing({ phase, percent }) {
+      const indeterminate = percent === null || phase !== 'downloading';
+      const motion = phase === 'installing' ? 'is-install' : 'is-verify';
+      return h(
+        'svg',
+        {
+          className: `isl-updateRing${indeterminate ? ` ${motion}` : ''}`,
+          viewBox: '0 0 30 30',
+          'aria-hidden': true,
+          focusable: 'false',
+        },
+        h('circle', { className: 'isl-updateRingTrack', cx: 15, cy: 15, r: 12, pathLength: 100 }),
+        h('circle', {
+          className: 'isl-updateRingBar',
+          cx: 15,
+          cy: 15,
+          r: 12,
+          pathLength: 100,
+          strokeDasharray: indeterminate ? undefined : `${percent} ${100 - percent}`,
+        }),
+      );
+    }
+
+    /**
+     * Glyph for the rail update button. A download in flight has none: the ring
+     * is the whole state, and the centre stays clear so the arc reads as
+     * progress instead of decoration.
+     */
+    function UpdateGlyph({ phase, size = 16 }) {
+      if (phase === 'downloading') return null;
+      if (phase === 'available' || phase === 'error') return h(DownloadGlyph, { size });
+      if (phase === 'verifying') return h(CheckGlyph, { size });
+      return h(RestartGlyph, { size });
     }
 
     function readRailPins() {
@@ -1646,11 +1649,13 @@ window.__ModuleLoader__.load({
           return { label, detail: label };
         }
         case 'downloading': {
-          const percent = Math.max(0, Math.min(100, Math.round(Number(state.percent) || 0)));
-          const label = formatCopy(copy.updateDownloading, { percent });
+          const percent = updatePercent(state);
+          const label = percent === null
+            ? copy.updateDownloadingPlain
+            : formatCopy(copy.updateDownloading, { percent });
           return {
             label,
-            detail: version === undefined
+            detail: percent === null || version === undefined
               ? label
               : formatCopy(copy.updateDownloadingDetail, { percent, version }),
           };
@@ -1733,7 +1738,9 @@ window.__ModuleLoader__.load({
       if (!['available', 'downloading', 'verifying', 'installing', 'ready', 'error'].includes(phase)) return null;
 
       const clickable = phase === 'available' || phase === 'ready' || phase === 'error';
-      const busy = pending || phase === 'downloading' || phase === 'verifying' || phase === 'installing';
+      const ringed = phase === 'downloading' || phase === 'verifying' || phase === 'installing';
+      const busy = pending || ringed;
+      const percent = updatePercent(state);
       const { label, detail } = updatePresentationCopy(state, failed, copy);
       const open = () => {
         if (!clickable || pending) return;
@@ -1761,60 +1768,9 @@ window.__ModuleLoader__.load({
           'aria-busy': busy ? 'true' : undefined,
           onClick: open,
         },
-        h(UpdateGlyph, { phase }),
+        ringed ? h(UpdateRing, { phase, percent }) : null,
+        h(UpdateGlyph, { phase, size: ringed ? 14 : 16 }),
         phase === 'error' ? h('span', { className: 'isl-updateErrorDot', 'aria-hidden': true }) : null,
-      );
-    }
-
-    const UPDATE_SHOWCASE_PHASES = ['available', 'downloading', 'verifying', 'installing', 'ready', 'error'];
-    const UPDATE_STATE_LABELS = {
-      available: 'updateStateAvailable',
-      downloading: 'updateStateDownloading',
-      verifying: 'updateStateVerifying',
-      installing: 'updateStateInstalling',
-      ready: 'updateStateReady',
-      error: 'updateStateError',
-    };
-
-    /** Static, non-interactive copies of the rail button for the settings page. */
-    function IslandsUpdateShowcase({ copy }) {
-      return h(
-        'div',
-        { className: 'isl-updateShowcase' },
-        h(
-          'div',
-          { className: 'isl-updateShowcaseHead' },
-          h('div', { className: 'isl-updateShowcaseTitle' }, copy.updateShowcaseTitle),
-          h('div', { className: 'isl-updateShowcaseDesc' }, copy.updateShowcaseDesc),
-        ),
-        h(
-          'div',
-          { className: 'isl-updateShowcaseGrid' },
-          UPDATE_SHOWCASE_PHASES.map((phase) => {
-            const label = copy[UPDATE_STATE_LABELS[phase]] ?? phase;
-            return h(
-              'div',
-              { className: 'isl-updateShowcaseItem', key: phase },
-              h(
-                'div',
-                { className: 'isl-updateShowcaseStage' },
-                h(
-                  'span',
-                  {
-                    className: `isl-updateButton is-preview is-${phase}`,
-                    'data-update-phase': phase,
-                    title: label,
-                    'aria-hidden': 'true',
-                  },
-                  h(UpdateGlyph, { phase }),
-                  phase === 'error' ? h('span', { className: 'isl-updateErrorDot' }) : null,
-                ),
-              ),
-              h('div', { className: 'isl-updateShowcaseLabel' }, label),
-              h('div', { className: 'isl-updateShowcasePhase' }, phase),
-            );
-          }),
-        ),
       );
     }
 
@@ -2578,96 +2534,6 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /**
-     * Turn the skin on only when the build still matches the stylesheet.
-     *
-     * The plugin's own chrome is plain React and keeps rendering no matter what
-     * DSH does, while every layout rule is keyed to host contracts and skin parts. A
-     * renamed anchor therefore yields a half-skinned, overlapping UI instead of
-     * a clean fallback, so a mismatched build stays on the untouched default.
-     */
-    function startCompatibilityGate() {
-      let frameHandle = null;
-      let settled = false;
-      let retries = 0;
-      let contentSeenAt = null;
-      const startedAt = Date.now();
-
-      const stop = () => {
-        if (frameHandle !== null) cancelAnimationFrame(frameHandle);
-        frameHandle = null;
-      };
-
-      const fail = (missing) => {
-        if (settled) return;
-        settled = true;
-        stop();
-        setCompat({ status: 'missing', missing, forced: false, version: shellVersion, structure: shellStructure });
-        console.warn('[islands-ui] host contracts missing; the skin stayed off:', {
-          version: shellVersion,
-          structure: shellStructure,
-          missing,
-        });
-        // Someone who already switched the skin off does not need a popup; the
-        // settings page still carries the explanation.
-        if (readStored()) showCompatibilityToast();
-      };
-
-      const pass = () => {
-        if (settled) return;
-        settled = true;
-        stop();
-        setCompat({ status: 'ok', missing: [], forced: false, version: shellVersion, structure: shellStructure });
-        activate();
-      };
-
-      const settle = () => {
-        frameHandle = null;
-        if (settled) return;
-        shellStructure = detectStructure();
-        const missing = missingAnchors();
-        if (missing.length === 0) {
-          pass();
-          return;
-        }
-        // Siblings can mount a frame after the frame element itself.
-        retries += 1;
-        if (retries < 4) {
-          frameHandle = requestAnimationFrame(settle);
-          return;
-        }
-        fail(missing);
-      };
-
-      const watch = () => {
-        frameHandle = null;
-        if (settled) return;
-        if (document.querySelector(HOST.ROOT_SLOT) !== null) {
-          settle();
-          return;
-        }
-        // Anything rendered into the app root means the shell mounted; if the
-        // frame anchor is still absent after a grace period it was renamed,
-        // and waiting for the hard timeout would only delay the notice.
-        const root = document.getElementById('root') ?? document.body;
-        if (contentSeenAt === null && root !== null && root.childElementCount > 0) {
-          contentSeenAt = Date.now();
-        }
-        if (contentSeenAt !== null && Date.now() - contentSeenAt > COMPAT_CONTENT_GRACE_MS) {
-          fail(missingAnchors());
-          return;
-        }
-        if (Date.now() - startedAt > COMPAT_TIMEOUT_MS) {
-          fail(missingAnchors());
-          return;
-        }
-        frameHandle = requestAnimationFrame(watch);
-      };
-
-      frameHandle = requestAnimationFrame(watch);
-      return stop;
-    }
-
     function activate() {
       if (activated || skinRegistrar === null) return;
       activated = true;
@@ -2732,16 +2598,30 @@ window.__ModuleLoader__.load({
         if (closed) return;
         closed = true;
         if (timer !== null) window.clearTimeout(timer);
+        document.removeEventListener('visibilitychange', onVisibility);
+        if (compatToastDismiss === dismiss) compatToastDismiss = null;
         host.classList.remove('is-visible');
         window.setTimeout(() => host.remove(), 200);
       };
+      // The five-second life runs on visible time: a hidden window throttles
+      // timers, and the notice used to expire before anyone could see it.
+      const armDismiss = () => {
+        if (closed) return;
+        if (timer !== null) window.clearTimeout(timer);
+        timer = window.setTimeout(dismiss, 5000);
+      };
+      function onVisibility() {
+        if (document.visibilityState === 'visible') armDismiss();
+      }
+      compatToastDismiss = dismiss;
 
       const openSection = () => {
         dismiss();
         openSettings({ section: 'Islands UI' });
       };
 
-      timer = window.setTimeout(dismiss, 5000);
+      document.addEventListener('visibilitychange', onVisibility);
+      if (document.visibilityState === 'visible') armDismiss();
       close.addEventListener('click', (event) => {
         event.stopPropagation();
         dismiss();
@@ -2755,7 +2635,11 @@ window.__ModuleLoader__.load({
 
       host.append(body, close);
       document.body.append(host);
-      requestAnimationFrame(() => host.classList.add('is-visible'));
+      // Force the first layout so the entrance transition runs without waiting
+      // for an animation frame: a hidden window never delivers one, and the
+      // toast used to be created, never shown, then removed five seconds later.
+      void host.offsetWidth;
+      host.classList.add('is-visible');
     }
 
     /** Islands settings page: skin switch + accent color. */
@@ -2921,9 +2805,6 @@ window.__ModuleLoader__.load({
             h('span', { className: 'isl-switchThumb' }),
           ),
         ),
-        // Preview hidden on request. The component and its styles stay in place;
-        // restore the next line to show the state gallery again.
-        // h(IslandsUpdateShowcase, { copy }),
       );
     }
 
@@ -3254,7 +3135,29 @@ window.__ModuleLoader__.load({
           activate();
           return;
         }
-        ctx.effect(() => startCompatibilityGate(), 'dsh-islands-ui: compatibility gate');      },
+        ctx.effect(() => {
+          const gate = createCompatGate({
+            doc: document,
+            win: window,
+            missingAnchors,
+            rootSlot: HOST.ROOT_SLOT,
+            publish: ({ status, missing }) => {
+              shellStructure = detectStructure();
+              setCompat({ status, missing, forced: isForced(), version: shellVersion, structure: shellStructure });
+            },
+            readStored,
+            showToast: showCompatibilityToast,
+            dismissToast: () => {
+              if (compatToastDismiss !== null) compatToastDismiss();
+            },
+            activate,
+            warn: (message, detail) =>
+              console.warn(message, { version: shellVersion, structure: shellStructure, ...detail }),
+            info: (message) => console.info(message),
+          });
+          gate.start();
+          return () => gate.stop();
+        }, 'dsh-islands-ui: compatibility gate');      },
     };
   },
 });

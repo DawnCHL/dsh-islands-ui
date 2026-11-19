@@ -201,7 +201,6 @@ html[data-platform='darwin'] body[data-islands-ui][data-ds-dark-theme] {
    already draws a circle. */
 body[data-islands-ui] .isl-updateButton,
 body[data-islands-ui] .isl-updateErrorDot,
-body[data-islands-ui] .isl-dmx-dot,
 body[data-islands-ui] .isl-railRipple,
 body[data-islands-ui] .isl-modelBack,
 body[data-islands-ui] .isl-effortReset,

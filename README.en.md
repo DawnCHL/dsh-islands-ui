@@ -64,7 +64,7 @@ Refresh after uninstalling. Your skin preferences stay on this machine and are r
 | ⚙️ | **Settings page** | Settings → Islands UI: on/off, accent presets, custom color, follow-theme and the smooth input caret |
 | 📌 | **Pinned shelf** | Pinned sessions stay in their workspace and are also aggregated between “New session” and “Workspace”; the group collapses |
 | 🌙 | **Dark mode** | Full dark palette: near-black canvas, dark islands, translucent interaction layers |
-| 🔄 | **Desktop update entry** | Pinned above the settings gear; distinct states for available, downloading, verifying, installing and failure, with accent-colored 3×3 dot-matrix loaders |
+| 🔄 | **Desktop update entry** | Pinned above the settings gear; distinct states for available, downloading, verifying, installing and failure; a 30px disc whose ring follows the host percentage while downloading, sweeps steadily during verification and spins faster with a breath while installing |
 | ⌨️ | **Shortcuts** | `⌘B`, `⌥⌘B`, `⌘,`, `⌘⇧M`; buttons show the current binding on hover |
 
 Everything happens in the interface layer. Rail ordering, the pinned shelf and the settings page do not modify your Harness sessions, settings or plugin data.
