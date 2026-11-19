@@ -15,6 +15,7 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 | `src/host/footer.js` | 工作区底部 footer 控制器；折叠、拖拽高度、记忆、空态，发布 `data-islands-footer-*` 与 `--isl-footer-*` |
 | `src/host/foot.js` | 轨道脚注测量；只读 `settings-area` 部件，把高度发布为 `--isl-foot-height` |
 | `src/host/collapse.js` | 宿主折叠策略；区分用户折叠与自动折叠（纯函数，单测覆盖） |
+| `src/host/compat-gate.js` | 兼容门禁状态机：等待外壳挂载、部件提交宽限、失败自愈与会话可见性（时钟、定时器、契约探针全部注入，单测覆盖） |
 | `src/*.css` | 只读 `data-islands-part` 和宿主契约 |
 | `src/60-peers.css` | 第三方插件适配，允许 `[class*=...]`，核心样式不读 |
 | `src/31-caret.css` | 发送按钮强调色与光标绘制样式，读 `composer-primary` 部件 |

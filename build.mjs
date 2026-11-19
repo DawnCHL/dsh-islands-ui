@@ -53,6 +53,11 @@ const footerModule = footer.replace(/^export\s+/gmu, '').trim();
 const collapse = await readFile(join(srcDir, 'host', 'collapse.js'), 'utf8');
 const collapseModule = collapse.replace(/^export\s+/gmu, '').trim();
 
+// The compatibility gate is a state machine with injected timers, visibility,
+// contract probe and callbacks, so it is unit tested from source as well.
+const compatGate = await readFile(join(srcDir, 'host', 'compat-gate.js'), 'utf8');
+const compatGateModule = compatGate.replace(/^export\s+/gmu, '').trim();
+
 const template = await readFile(join(srcDir, 'client.template.js'), 'utf8');
 if (!template.includes("'__ISLANDS_CSS__'")) throw new Error('client.template.js lost its CSS placeholder');
 if (!template.includes('/*__HOST_RUNTIME__*/')) {
@@ -70,14 +75,18 @@ if (!template.includes('/*__FOOTER_MODULE__*/')) {
 if (!template.includes('/*__COLLAPSE_MODULE__*/')) {
   throw new Error('client.template.js lost its collapse-policy placeholder');
 }
+if (!template.includes('/*__COMPAT_GATE_MODULE__*/')) {
+  throw new Error('client.template.js lost its compatibility-gate placeholder');
+}
 const built = template
   .replace('/*__HOST_RUNTIME__*/', () => hostRuntime)
   .replace('/*__CARET_MODULE__*/', () => caretModule)
   .replace('/*__FOOT_MODULE__*/', () => footModule)
   .replace('/*__FOOTER_MODULE__*/', () => footerModule)
   .replace('/*__COLLAPSE_MODULE__*/', () => collapseModule)
+  .replace('/*__COMPAT_GATE_MODULE__*/', () => compatGateModule)
   .replace("'__ISLANDS_CSS__'", () => JSON.stringify(css));
-const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length + footerModule.length + collapseModule.length} bytes of CSS, host bridge and controllers`;
+const summary = `${files.length} stylesheets, ${css.length + hostRuntime.length + caretModule.length + footModule.length + footerModule.length + collapseModule.length + compatGateModule.length} bytes of CSS, host bridge and controllers`;
 
 if (process.argv.includes('--check')) {
   let current = '';

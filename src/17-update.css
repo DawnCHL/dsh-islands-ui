@@ -1,11 +1,14 @@
 /* ==========================================================================
    Islands UI · 17 desktop update
-   One circular update entry above the settings gear. The skin owns the whole
-   surface: the shipped indicator lives in the 36px settings row and overflows
-   beside the account avatar, and it does not expose a phase attribute.
+   One 30px circular update entry above the settings gear. The skin owns the
+   whole surface: the shipped indicator lives in the settings row, overflows
+   beside the account avatar and exposes no phase attribute.
 
-   The three busy patterns follow the open-source Dot Matrix loaders
-   (dotmatrix.zzzzshawn.cloud): dotm-3x3-7, dotm-3x3-16 and dotm-3x3-6.
+   Busy phases draw a progress ring inside the disc edge. `downloading` is
+   determinate (`percent` from `dshDesktop.updates`); `verifying` and
+   `installing` carry no percentage, so the same ring runs an indeterminate
+   sweep — steady for verification, faster and breathing while the app
+   prepares to restart.
    ========================================================================== */
 
 /* The native indicator (and its tiny toggle badge) would duplicate the rail
@@ -24,6 +27,9 @@ body[data-islands-ui] {
   --isl-update-bg: var(--dsw-alias-state-business-primary);
   --isl-update-bg-hover: color-mix(in srgb, var(--isl-update-bg) 88%, #111214);
   --isl-update-danger: #d93a40;
+  /* Ring on the accent disc: white bar, translucent track. */
+  --isl-update-ring-bar: #fff;
+  --isl-update-ring-track: rgba(255, 255, 255, 0.22);
 }
 
 body[data-islands-ui][data-ds-dark-theme] {
@@ -33,8 +39,9 @@ body[data-islands-ui][data-ds-dark-theme] {
 
 body[data-islands-ui] .isl-updateButton {
   position: fixed;
-  left: calc(var(--isl-gap) + (var(--isl-rail-width) - 36px) / 2);
-  /* Stacked above the gear, so it follows the measured foot stack too. */
+  left: calc(var(--isl-gap) + (var(--isl-rail-width) - 30px) / 2);
+  /* Stacked above the gear, so it follows the measured foot stack too. The
+     36px below is the gear tile, not this button. */
   bottom: calc(
     var(--isl-foot-height, 36px) + var(--isl-foot-gap) + 36px + var(--isl-update-gap)
   );
@@ -42,8 +49,8 @@ body[data-islands-ui] .isl-updateButton {
   box-sizing: border-box;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   margin: 0;
   padding: 0;
   border: 1px solid transparent;
@@ -51,12 +58,11 @@ body[data-islands-ui] .isl-updateButton {
   background: var(--isl-update-bg);
   color: #fff;
   cursor: default;
-  box-shadow:
-    0 2px 6px -1px color-mix(in srgb, var(--isl-update-bg) 38%, transparent),
-    0 8px 18px -10px color-mix(in srgb, var(--isl-update-bg) 62%, transparent);
+  /* Flat on purpose: the disc is the whole entry, and a coloured shadow made a
+     30px button read as a floating pill that competed with the rail tiles. */
+  box-shadow: none;
   transition:
     background-color 0.15s var(--ds-ease-in-out),
-    box-shadow 0.15s var(--ds-ease-in-out),
     transform 0.15s var(--ds-ease-in-out),
     border-color 0.15s var(--ds-ease-in-out);
 }
@@ -68,9 +74,6 @@ body[data-islands-ui] .isl-updateButton.is-clickable {
 body[data-islands-ui] .isl-updateButton.is-clickable:hover {
   background: var(--isl-update-bg-hover);
   transform: translateY(-1px);
-  box-shadow:
-    0 3px 8px -1px color-mix(in srgb, var(--isl-update-bg) 44%, transparent),
-    0 10px 22px -10px color-mix(in srgb, var(--isl-update-bg) 72%, transparent);
 }
 
 body[data-islands-ui] .isl-updateButton.is-clickable:active {
@@ -84,18 +87,14 @@ body[data-islands-ui] .isl-updateButton:focus-visible {
 
 /* The click guard between pressing the entry and the update panel opening.
    It must not fade the element: `opacity` lightened the surface towards the
-   canvas while the coloured shadow stayed visible under it, so the entry read
-   as a pale disc floating on a shadow. Keep the surface saturated, drop the
-   lift and soften the shadow — and cover the hover state, which is still in
-   force while the pointer rests on the button. */
+   canvas, so the entry read as a pale disc. Keep the surface saturated and
+   drop the lift; the hover state is covered too because the pointer is still
+   resting on the button while the panel opens. */
 body[data-islands-ui] .isl-updateButton.is-pending,
 body[data-islands-ui] .isl-updateButton.is-pending.is-clickable:hover {
   background: var(--isl-update-bg-hover);
   transform: none;
   cursor: default;
-  box-shadow:
-    0 1px 3px -1px color-mix(in srgb, var(--isl-update-bg) 30%, transparent),
-    0 3px 8px -6px color-mix(in srgb, var(--isl-update-bg) 45%, transparent);
 }
 
 /* Busy phases keep the circle but let the matrix carry the state. */
@@ -109,169 +108,97 @@ body[data-islands-ui] .isl-updateButton.is-error {
   border-color: color-mix(in srgb, var(--isl-update-danger) 55%, transparent);
   background: color-mix(in srgb, var(--isl-update-danger) 14%, transparent);
   color: var(--isl-update-danger);
-  box-shadow: none;
 }
 
 body[data-islands-ui] .isl-updateButton.is-error.is-clickable:hover {
   border-color: color-mix(in srgb, var(--isl-update-danger) 72%, transparent);
   background: color-mix(in srgb, var(--isl-update-danger) 22%, transparent);
-  box-shadow: 0 2px 8px -4px color-mix(in srgb, var(--isl-update-danger) 55%, transparent);
 }
 
 body[data-islands-ui] .isl-updateButton.is-error:focus-visible {
   outline-color: color-mix(in srgb, var(--isl-update-danger) 55%, transparent);
 }
 
-/* Busy phases drop the circle entirely: the mosaic itself is the control,
-   tinted with the user's accent so it belongs to the skin rather than to the
-   shipped brand pill. */
+/* Busy phases keep the accent disc: the ring is the state, the disc is the
+   surface it belongs to. */
 body[data-islands-ui] .isl-updateButton.is-downloading,
 body[data-islands-ui] .isl-updateButton.is-verifying,
 body[data-islands-ui] .isl-updateButton.is-installing {
-  border-color: transparent;
-  background: transparent;
-  color: var(--isl-accent);
-  box-shadow: none;
+  cursor: default;
 }
 
 body[data-islands-ui] .isl-updateErrorDot {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--isl-update-danger);
-  box-shadow: 0 0 0 2px var(--isl-surface);
-}
-
-/* ---- 3x3 dot matrix ------------------------------------------------------ */
-
-body[data-islands-ui] .isl-dmx {
-  display: grid;
-  grid-template-columns: repeat(3, 5px);
-  grid-template-rows: repeat(3, 5px);
-  gap: 2.5px;
-  width: 20px;
-  height: 20px;
-}
-
-body[data-islands-ui] .isl-dmx-dot {
-  display: block;
+  top: 0;
+  right: 0;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: currentColor;
-  opacity: 0.14;
-  will-change: opacity;
+  background: var(--isl-update-danger);
+  box-shadow: 0 0 0 1.5px var(--isl-surface);
 }
 
-/* Column Flux (dotm-3x3-7): columns pulse left to right, all rows together.
-   The three 400ms phases overlap, so at least one column stays lit while the
-   busy button has no filled background behind it. */
-body[data-islands-ui] .isl-dmx-column .isl-dmx-dot {
-  animation: isl-dmx-column 1200ms cubic-bezier(0.42, 0, 0.58, 1) infinite;
-  animation-delay: calc(var(--dmx-col) * 400ms);
+/* ---- Progress ring ------------------------------------------------------ */
+
+/* Covers the 1px transparent border as well (`inset: -1px`). The circle is
+   r=12 with a 2px stroke, so the ring sits 2px inside the disc edge: that rim
+   keeps the arc from reading as a border and leaves room for the round caps. */
+body[data-islands-ui] .isl-updateRing {
+  position: absolute;
+  inset: -1px;
+  /* Start the arc at twelve o’clock. */
+  transform: rotate(-90deg);
+  pointer-events: none;
 }
 
-/* Core Echo (dotm-3x3-6): Manhattan rings ripple out from the centre. */
-body[data-islands-ui] .isl-dmx-ripple .isl-dmx-dot {
-  animation: isl-dmx-ripple 1230ms ease-in-out infinite;
-  animation-delay: calc(var(--dmx-ring) * 165ms);
+body[data-islands-ui] .isl-updateRing circle {
+  fill: none;
+  stroke-width: 2;
 }
 
-/* Smiley Spin (dotm-3x3-16): the pixel glyph rotates in four 180ms phases.
-   Each cell is lit for one or two phases; the first wraps across the cycle. */
-body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot {
-  animation-duration: 720ms;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  opacity: 0.12;
+body[data-islands-ui] .isl-updateRingTrack {
+  stroke: var(--isl-update-ring-track);
 }
 
-body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot[data-span='1'] {
-  animation-name: isl-dmx-spin-1;
+body[data-islands-ui] .isl-updateRingBar {
+  stroke: var(--isl-update-ring-bar);
+  stroke-linecap: round;
+  /* The circle carries pathLength="100", so the dash is a plain percentage. */
+  transition: stroke-dasharray 0.3s var(--ds-ease-in-out);
 }
 
-body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot[data-span='2'] {
-  animation-name: isl-dmx-spin-2;
+/* Verification: one steady sweep around the ring. */
+body[data-islands-ui] .isl-updateRing.is-verify .isl-updateRingBar {
+  stroke-dasharray: 24 76;
+  animation: isl-update-ring-sweep 1.6s linear infinite;
 }
 
-body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot[data-span='wrap'] {
-  animation-name: isl-dmx-spin-wrap;
+/* Installation: the same sweep, faster, breathing while the app packs up. */
+body[data-islands-ui] .isl-updateRing.is-install .isl-updateRingBar {
+  stroke-dasharray: 24 76;
+  animation:
+    isl-update-ring-sweep 0.9s linear infinite,
+    isl-update-ring-breathe 1.2s var(--ds-ease-in-out) infinite;
 }
 
-@keyframes isl-dmx-column {
-  0% {
-    opacity: 0.14;
+@keyframes isl-update-ring-sweep {
+  from {
+    stroke-dashoffset: 0;
   }
 
-  10% {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@keyframes isl-update-ring-breathe {
+  0%,
+  100% {
     opacity: 1;
   }
 
-  40% {
-    opacity: 0.14;
-  }
-
-  100% {
-    opacity: 0.14;
-  }
-}
-
-@keyframes isl-dmx-ripple {
-  0%,
-  100% {
-    opacity: 0.08;
-  }
-
-  34% {
-    opacity: 1;
-  }
-
-  60% {
-    opacity: 0.22;
-  }
-}
-
-@keyframes isl-dmx-spin-1 {
-  0%,
-  20% {
-    opacity: 0.88;
-  }
-
-  25%,
-  100% {
-    opacity: 0.12;
-  }
-}
-
-@keyframes isl-dmx-spin-2 {
-  0%,
-  45% {
-    opacity: 0.88;
-  }
-
-  50%,
-  100% {
-    opacity: 0.12;
-  }
-}
-
-@keyframes isl-dmx-spin-wrap {
-  0%,
-  20% {
-    opacity: 0.88;
-  }
-
-  25%,
-  70% {
-    opacity: 0.12;
-  }
-
-  75%,
-  100% {
-    opacity: 0.88;
+  50% {
+    opacity: 0.55;
   }
 }
 
@@ -287,114 +214,14 @@ body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot[data-span='wrap'] {
     transition: none;
   }
 
-  body[data-islands-ui] .isl-dmx-dot {
+  body[data-islands-ui] .isl-updateRingBar {
+    transition: none;
     animation: none !important;
   }
 
-  body[data-islands-ui] .isl-dmx-column .isl-dmx-dot {
-    opacity: 0.3;
+  /* No sweep: hold a static quarter arc so the ring still reads as "working". */
+  body[data-islands-ui] .isl-updateRing.is-verify .isl-updateRingBar,
+  body[data-islands-ui] .isl-updateRing.is-install .isl-updateRingBar {
+    stroke-dasharray: 24 76;
   }
-
-  body[data-islands-ui] .isl-dmx-column .isl-dmx-dot[data-col='1'] {
-    opacity: 0.55;
-  }
-
-  body[data-islands-ui] .isl-dmx-column .isl-dmx-dot[data-col='2'] {
-    opacity: 0.88;
-  }
-
-  body[data-islands-ui] .isl-dmx-ripple .isl-dmx-dot {
-    opacity: 0.3;
-  }
-
-  body[data-islands-ui] .isl-dmx-ripple .isl-dmx-dot[data-ring='1'] {
-    opacity: 0.55;
-  }
-
-  body[data-islands-ui] .isl-dmx-ripple .isl-dmx-dot[data-ring='0'] {
-    opacity: 1;
-  }
-
-  body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot {
-    opacity: 0.12;
-  }
-
-  body[data-islands-ui] .isl-dmx-smiley .isl-dmx-dot[data-on='1'] {
-    opacity: 0.88;
-  }
-}
-
-/* ---- Settings showcase --------------------------------------------------- */
-
-body[data-islands-ui] .isl-updateShowcase {
-  margin-top: 18px;
-  padding: 16px;
-  border: 1px solid var(--isl-border-soft);
-  border-radius: var(--isl-radius-lg);
-  background: var(--dsw-alias-settings-card-fill);
-}
-
-body[data-islands-ui] .isl-updateShowcaseHead {
-  margin-bottom: 14px;
-}
-
-body[data-islands-ui] .isl-updateShowcaseTitle {
-  color: var(--dsw-alias-label-primary);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
-body[data-islands-ui] .isl-updateShowcaseDesc {
-  margin-top: 3px;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-body[data-islands-ui] .isl-updateShowcaseGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
-  gap: 14px 8px;
-}
-
-body[data-islands-ui] .isl-updateShowcaseItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  text-align: center;
-}
-
-body[data-islands-ui] .isl-updateShowcaseStage {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border: 1px solid var(--isl-border-soft);
-  border-radius: var(--isl-radius-lg);
-  background: var(--isl-surface);
-}
-
-body[data-islands-ui] .isl-updateShowcase .isl-updateButton.is-preview {
-  position: relative;
-  left: auto;
-  bottom: auto;
-  z-index: auto;
-  transform: none;
-  cursor: default;
-}
-
-body[data-islands-ui] .isl-updateShowcaseLabel {
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-body[data-islands-ui] .isl-updateShowcasePhase {
-  color: var(--dsw-alias-label-tertiary);
-  font-family: var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 10px;
-  line-height: 14px;
 }
