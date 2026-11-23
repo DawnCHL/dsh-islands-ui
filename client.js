@@ -3356,8 +3356,20 @@ function createYieldGuard(deps) {
       const iconFor = (id, size) => {
         const entry = byId.get(id);
         if (entry?.component !== undefined) {
+          // The registration contract hands a plugin's `inject` face to its
+          // component; the shell renders it through the slot renderer, so this
+          // rail resolves the same face itself. A factory that refuses the
+          // owner props still renders without them, exactly as before.
+          let injected;
           try {
-            return h(entry.component, { size, active: active === id });
+            injected = typeof entry.options?.inject === 'function'
+              ? entry.options.inject({ size, active: active === id })
+              : undefined;
+          } catch {
+            injected = undefined;
+          }
+          try {
+            return h(entry.component, { size, active: active === id, ...(injected ?? {}) });
           } catch {
             /* fall back to the generic glyph */
           }
@@ -3439,6 +3451,13 @@ function createYieldGuard(deps) {
         // a destination opens the workspace on it, matching the host's rail.
         if (document.body.hasAttribute(WORKSPACE_ATTR)) toggleWorkspace();
         layoutService?.selectPanel(id);
+        // Panels that take over the center column without owning a `main` key
+        // (task board, SSH, image studio …) cannot be closed by selecting the
+        // conversation alone: they hear it through the activation event the
+        // same surfaces already announce themselves with.
+        if (id === null) {
+          document.dispatchEvent(new CustomEvent('dsh-panel-activate', { detail: null }));
+        }
       };
 
       const autoScroll = (clientY) => {
