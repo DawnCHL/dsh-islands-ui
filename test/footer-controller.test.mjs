@@ -5,6 +5,7 @@ import {
   footerMaxHeight,
   footerMinHeight,
   footerRenderedHeight,
+  footerSlotHasContent,
   footerStoredHeight,
 } from '../src/host/footer.js';
 
@@ -95,4 +96,66 @@ test('the 200px floor yields to the cap on short sidebars', () => {
   assert.equal(clampFooterHeight(300, 300), 135);
   // A stored height below the floor is lifted to it.
   assert.equal(clampFooterHeight(0, 800), 200);
+});
+
+// The host renders `display: contents` anchors around the outlet and around
+// each guest, so a guest that renders nothing still leaves empty wrappers.
+const text = (data) => ({ nodeType: 3, data });
+const node = (display, children = [], textContent = '') => ({
+  nodeType: 1,
+  display,
+  children,
+  childNodes: textContent === '' ? [...children] : [...children, text(textContent)],
+});
+const styleOf = (element) => ({ display: element.display });
+
+test('an outlet that only holds the host anchor is empty', () => {
+  const outlet = node('contents', [node('contents')]);
+  assert.equal(footerSlotHasContent(outlet, styleOf), false);
+  // The anchor chain can be nested; none of it is content.
+  const nested = node('contents', [node('contents', [node('contents')])]);
+  assert.equal(footerSlotHasContent(nested, styleOf), false);
+});
+
+test('a guest rendered under the anchors counts as content', () => {
+  const outlet = node('contents', [node('contents', [node('block', [], '')])]);
+  assert.equal(footerSlotHasContent(outlet, styleOf), true);
+  // A guest that renders text only is content too.
+  const textOnly = node('contents', [node('contents', [], '远端未连接')]);
+  assert.equal(footerSlotHasContent(textOnly, styleOf), true);
+});
+
+test('text inside a hidden child never keeps the footer open', () => {
+  // `textContent` would read "45%" out of the display:none child.
+  const outlet = node('contents', [node('contents', [node('none', [], '45%')])]);
+  assert.equal(footerSlotHasContent(outlet, styleOf), false);
+  // Bare text is still content.
+  assert.equal(footerSlotHasContent(node('contents', [], '45%'), styleOf), true);
+  assert.equal(footerSlotHasContent(node('contents', [], '   '), styleOf), false);
+});
+
+test('wrappers with only comments or whitespace stay empty', () => {
+  const comment = { nodeType: 8, data: 'section' };
+  const wrapper = { nodeType: 1, display: 'contents', children: [], childNodes: [comment] };
+  assert.equal(footerSlotHasContent(wrapper, styleOf), false);
+  // A visible text node next to a hidden sibling is still content.
+  const mixed = {
+    nodeType: 1, display: 'contents', children: [],
+    childNodes: [text('live'), node('none', [], 'gone')],
+  };
+  assert.equal(footerSlotHasContent(mixed, styleOf), true);
+});
+
+test('a guest the plugin hid with display:none is still empty', () => {
+  const outlet = node('contents', [node('contents', [node('none')])]);
+  assert.equal(footerSlotHasContent(outlet, styleOf), false);
+  // ... even when it kept text behind the hidden box.
+  const hiddenText = node('contents', [node('none', [], '已断开')]);
+  assert.equal(footerSlotHasContent(hiddenText, styleOf), false);
+});
+
+test('a seat without the outlet anchor reads its direct children', () => {
+  assert.equal(footerSlotHasContent(node('flex', [node('none')]), styleOf), false);
+  assert.equal(footerSlotHasContent(node('flex', [node('block')]), styleOf), true);
+  assert.equal(footerSlotHasContent(null, styleOf), false);
 });

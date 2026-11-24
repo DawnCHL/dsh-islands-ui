@@ -366,10 +366,6 @@ body[data-islands-ui] .isl-footerResize {
   touch-action: none;
 }
 
-.isl-footerResize[hidden] {
-  display: none;
-}
-
 /* Accent bar while the resize strip is hovered or dragged: the trigger area
    itself lights up, not just the row below it. */
 .isl-footerResize::before {
@@ -397,7 +393,13 @@ body[data-islands-ui] .isl-footerResize {
   transition: transform 0.15s var(--ds-ease-in-out);
 }
 
-.isl-footerHandle[hidden] {
+/* The skin rules above set `display` on both affordances, and an author rule
+   always beats the UA's `[hidden] { display: none }` — a bare `[hidden]` rule
+   here loses on specificity, so the controller's `hidden` property would leave
+   a floating bar (and its resize strip) over an empty footer. Repeat the
+   `<body>` prefix so the hidden state still wins. */
+body[data-islands-ui] .isl-footerHandle[hidden],
+body[data-islands-ui] .isl-footerResize[hidden] {
   display: none;
 }
 

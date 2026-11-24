@@ -185,14 +185,33 @@ test('the workspace footer controller owns collapse, height and the handle', asy
   assert.match(source, /isl-footerResize/u);
   // The seat can be hidden by the empty state while a plugin mounts; content
   // presence must not depend on a rendered box, or the seat never comes back.
-  assert.match(source, /const root = slot \?\? seat/u);
-  assert.match(source, /getComputedStyle\(child\)\.display !== 'none'/u);
+  // The host's `display: contents` anchors are transparent: a guest that
+  // renders nothing leaves wrappers behind and must not keep the seat open.
+  assert.match(source, /export function footerSlotHasContent/u);
+  assert.match(source, /seat\.querySelector\(FOOTER_SLOT_SELECTOR\) \?\? seat/u);
+  assert.match(source, /display === 'none'/u);
+  assert.match(source, /display !== 'contents'/u);
   assert.match(source, /data-sidebar-drawer/u);
   assert.match(source, /transitionend/u);
   assert.match(source, /aria-controls/u);
   assert.match(source, /isl-footer-seat/u);
   assert.match(source, /documentElement\.lang/u);
   assert.match(source, /aria-label/u);
+});
+
+test('every [hidden] rule for a footer affordance carries the body prefix', async () => {
+  // Comments quote the competing selectors, so strip them before parsing rules.
+  const css = (await read('src/20-sidebar.css')).replace(/\/\*[\s\S]*?\*\//gu, '');
+  for (const affordance of ['isl-footerHandle', 'isl-footerResize']) {
+    const selectors = [...css.matchAll(/([^{}]+)\{/gu)]
+      .map((match) => match[1].trim().replace(/\s+/gu, ' '))
+      .filter((selector) => selector.includes(`.${affordance}[hidden]`));
+    assert.ok(selectors.length > 0, `${affordance}[hidden] rule`);
+    for (const selector of selectors) {
+      // A bare `[hidden]` rule loses to `body[data-islands-ui] .isl-... {display}`.
+      assert.match(selector, /body\[data-islands-ui\] /u, `${affordance}[hidden] needs the body prefix`);
+    }
+  }
 });
 
 test('the rail seat folds guests into one column above the account', async () => {
