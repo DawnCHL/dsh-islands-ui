@@ -147,6 +147,44 @@ export function footerRenderedHeight(storedHeight, naturalHeight, sidebarHeight)
 }
 
 /**
+ * Whether a footer seat holds a rendered guest.
+ *
+ * The host wraps its outlet and every guest in `display: contents` anchors, so
+ * a guest that renders nothing (a launcher that only appears on its own state,
+ * for example) still leaves a zero-height wrapper behind. Treat those wrappers
+ * as transparent: only a real element — or text — counts as content.
+ *
+ * Presence, not geometry, decides: the empty state hides the seat, and a guest
+ * mounting afterwards then has zero-size children, so a rect test would keep
+ * the seat hidden forever. A child set to `display: none` is still empty.
+ *
+ * @param root - the seat's `[data-slot]` outlet, or the seat without one.
+ * @param readStyle - computed-style reader, injectable for tests.
+ * @returns whether the seat has content to show.
+ */
+export function footerSlotHasContent(root, readStyle = (element) => getComputedStyle(element)) {
+  if (root == null) return false;
+  // Only text owned by a visible node counts: `textContent` would also read the
+  // text of a `display: none` child and keep an empty footer open.
+  const hasText = (node) => node.nodeType === 3 && String(node.data ?? '').trim() !== '';
+  const visit = (element) => {
+    const { display } = readStyle(element);
+    if (display === 'none') return false;
+    if (display !== 'contents') return true;
+    for (const node of element.childNodes ?? []) {
+      if (hasText(node)) return true;
+      if (node.nodeType === 1 && visit(node)) return true;
+    }
+    return false;
+  };
+  for (const node of root.childNodes ?? []) {
+    if (hasText(node)) return true;
+    if (node.nodeType === 1 && visit(node)) return true;
+  }
+  return false;
+}
+
+/**
  * Install the workspace footer panel.
  *
  * @returns {() => void} teardown that restores the host's default footer.
@@ -306,17 +344,9 @@ export function installFooterPanel() {
 
   const hasContent = () => {
     if (seat === null) return false;
-    const slot = seat.querySelector(FOOTER_SLOT_SELECTOR);
     // Older shells have no [data-slot] anchor; there the guests are the seat's
-    // direct children. Presence, not geometry, decides: the empty state hides
-    // the seat, so a plugin mounting afterwards has zero-size children and a
-    // rect test would keep the seat hidden forever. A child the plugin itself
-    // set to display:none is still "empty".
-    const root = slot ?? seat;
-    for (const child of root.children) {
-      if (getComputedStyle(child).display !== 'none') return true;
-    }
-    return root.textContent.trim() !== '';
+    // direct children.
+    return footerSlotHasContent(seat.querySelector(FOOTER_SLOT_SELECTOR) ?? seat);
   };
 
   const updateEmpty = () => {
@@ -413,11 +443,17 @@ export function installFooterPanel() {
     seatResize?.disconnect();
     if (seat === null) return;
     seatObserver = new MutationObserver(scheduleEmpty);
+    // The empty state hides the seat with `display: none`, and a ResizeObserver
+    // stays silent under a hidden subtree — so this observer is the only way a
+    // guest that mounts later can bring the seat back. Watch every attribute and
+    // text change rather than a whitelist: a guest may flip its own visibility
+    // through a `data-*`/`aria-*` attribute, and a missed mutation would hide
+    // the footer for good. The callback is rAF-coalesced and the check is cheap.
     seatObserver.observe(seat, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['style', 'class', 'hidden'],
+      characterData: true,
     });
     if (typeof ResizeObserver === 'function') {
       seatResize = new ResizeObserver(() => {
