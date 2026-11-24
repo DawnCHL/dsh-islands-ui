@@ -1,5 +1,22 @@
 # Changelog
 
+## 未发布
+
+### 界面
+
+- 左侧栏的归属副标题不再把无法确认的条目说成「DSH 内置」。宿主槽位账本只记录发起注册的 fiber，而内置 web client 的 `WC` fiber 同样会承接第三方插件的注册（例如 dsh-imagegen），所以 `WC` 既不代表内置也不代表第三方；现在只有拿到真实插件名时才显示归属（`· dsh-market`、`· dsh-taskboard/client`），`WC` 与空值一律不显示，内置项也不再显示归属。右键管理菜单与按钮的 `aria-label` 同步。
+
+### 修复
+
+- 底部 footer 在空置时真正收起。宿主给 outlet 和每个 guest 都套了 `display: contents` 锚点，插件渲染 `null` 时仍会留下空壳，原来的「存在即非空」判断把空壳当成内容，footer 永远进不了空态——`dsh-ssh` 这类常驻占位注册因此让工作区岛底部一直露着约 64px 的空条。现在穿透 `contents` 锚点，只有真实元素或可见文本才算内容；文本按节点自身统计而不是 `textContent`，隐藏子树里的文字不会被误判。
+- 空置态的恢复不再漏事件。座位空置时是 `display: none`，此时 `ResizeObserver` 不回调，恢复完全依赖 `MutationObserver`；观察范围改为覆盖任意属性与文本变化，插件用 `data-*` / `aria-*` 或文本切换可见性时 footer 也能回来，不会再永久消失。
+- 折叠把手与拖拽条在隐藏时真正隐藏。`body[data-islands-ui] .isl-footerHandle { display: grid }` 的优先级压过 `.isl-footerHandle[hidden]`，控制器设置的 `hidden` 不生效，空置时仍会浮着一条 20px 的把手（拖拽条同理）；隐藏规则改用相同的 `body` 前缀，空置 / 折叠时两者都不再显示。
+- 首页按钮点击「工作区」会让接管中间列的插件面板（如生图工作室）回到会话：皮肤在 `selectPanel(null)` 之后派发 `dsh-panel-activate`（`detail: null`），面板据此收场，不再需要再点一次它自己的图标。
+
+### 文档
+
+- `docs/host-contracts.md` 的空态契约补充 `display: contents` 锚点与「可见文本」规则，并说明判定是 presence-based。
+
 ## 1.2.5 — 2026-11-19
 
 ### 界面
