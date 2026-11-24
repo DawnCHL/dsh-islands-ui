@@ -67,7 +67,7 @@ Islands UI 不再把宿主构建输出的哈希类名写进样式表或 DOM 查�
 - handle 的 `aria-label` 跟随 `document.documentElement.lang`（zh → 底部栏，其他 → Footer），`aria-controls` 指向 footer 容器（无 id 时补 `isl-footer-seat`）；不设置 `title` 原生提示。
 - 折叠：底部 20px handle 条可点击收起/展开；收起时 footer 只保留这条，工作区恢复全高。默认展开。调整高度从 handle 上方 5px 的独立拖动条进行（悬停/拖动时显示强调色细条），按钮本身只负责点击，两者热区不重叠。
 - 滚动：内容超过当前高度时在 `footer-actions` 内滚动，滚动条按左侧 rail 的方式隐藏（`scrollbar-width: none`），滚轮/触控板仍可滚动。
-- 空态：槽位没有子项/文本时隐藏 footer 和 handle，工作区占满全高（presence-based；插件自己 `display:none` 的占位也算空）。
+- 空态：槽位里没有可见内容时隐藏 footer 与 handle（`data-islands-footer-empty` → `display: none`），工作区占满全高。判断会穿透宿主的 `display: contents` 锚点：只有真实元素或可见文本才算内容，空锚点、`display: none` 的子树（含其中的文字，`textContent` 不算数）都算空。判定是 presence-based 的——不看几何尺寸，所以座位隐藏后挂载的 guest 仍能把 footer 重新顶开；座位隐藏时 `ResizeObserver` 不回调，恢复依赖 `MutationObserver` 观察任意属性与文本变化。控制器用 `hidden` 属性隐藏 handle 与拖拽条，样式里的隐藏规则带 `body[data-islands-ui]` 前缀，才能压过皮肤自己的 `display` 规则。
 - 分隔与 handle：footer 与工作区之间用 20px 顶部留白分隔（不用 `border`）；handle 是覆盖整行留白的白底遮罩条（hover/拖动时整行圆角高亮），滚动内容不会从按钮两侧露出；折叠时它作为岛屿底盖，水平保持与展开相同的 8px 内缩（宽度不跳变），仅垂直内缩 1px 让卡片底边框可见，底部圆角用内圆角 `calc(var(--isl-radius-lg) - 1px)`；窄屏抽屉下 footer 上移 `--isl-gap`。工作区折叠（`data-islands-workspace-collapsed`）时 footer 和 handle 一起隐藏。
 - 访客几何在 `settings-area` 轨道座位里统一归一化（36px tile）；`footer-actions` 仍然是宽座位，不改访客几何。
 
