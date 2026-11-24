@@ -2223,7 +2223,6 @@ function createYieldGuard(deps) {
         railHint: '点击切换显示；按住图标拖动可排序',
         railShow: '显示在左侧栏',
         railHide: '从左侧栏移除',
-        builtIn: 'DSH 内置',
         noExtras: '左侧栏还没有图标',
         enable: '启用 Islands 界面',
         enableDesc: '关闭后立即恢复 DSH 默认外观，设置会保留。',
@@ -2318,7 +2317,6 @@ function createYieldGuard(deps) {
         railHint: 'Click to show or hide; drag an icon to reorder',
         railShow: 'Show in the left rail',
         railHide: 'Remove from the left rail',
-        builtIn: 'Built into DSH',
         noExtras: 'No icons on the left rail',
         enable: 'Enable Islands UI',
         enableDesc: 'Turn off to restore the default appearance immediately; your settings are kept.',
@@ -3379,16 +3377,17 @@ function createYieldGuard(deps) {
         return h(PlugGlyph);
       };
 
-      // Official panels are registered by the bundled web-client fiber, whose
-      // internal name is `wc`; that code means nothing in the UI. Third-party
-      // entries keep their package name so the owner is still recognizable.
+      // A registration only knows the fiber that made it. The bundled client
+      // registers under its internal name (`WC`, older bundles `wc`), and
+      // third-party plugins that register from that same fiber land there too —
+      // so the code identifies neither the owner nor "built in". Show an owner
+      // only when the registration names a real plugin, and show nothing when
+      // the owner cannot be confirmed (a built-in panel included).
       const ownerFor = (registrant) => {
         if (typeof registrant !== 'string') return undefined;
         const code = registrant.trim();
         if (code === '') return undefined;
-        // The bundled client reports the fiber as `WC` (older bundles may use
-        // lower case); both are the same internal name, not a plugin name.
-        return code.toLowerCase() === 'wc' ? copy.builtIn : code;
+        return code.toLowerCase() === 'wc' ? undefined : code;
       };
 
       const labelFor = (id) => {
