@@ -81,6 +81,9 @@ window.__ModuleLoader__.load({
         accentDesc: '用于选中状态、滑块、发送按钮等。',
         accentDefault: '跟随主题',
         accentCustom: '自定义颜色',
+        modelOverride: '覆写模型选择器',
+        modelOverrideDesc:
+          '开启后由 Islands 的模型与推理等级菜单接管；关闭时使用 DSH 原生选择器，可访问「启用智能体团队协作」等原生选项。',
         models: '选择模型',
         effort: '推理等级',
         back: '返回',
@@ -175,6 +178,9 @@ window.__ModuleLoader__.load({
         accentDesc: 'Used for selected states, sliders, the send button and more.',
         accentDefault: 'Follow theme',
         accentCustom: 'Custom color',
+        modelOverride: 'Override the model selector',
+        modelOverrideDesc:
+          'Let the Islands model and reasoning menu replace the native selector. Turn off to use the native selector and its built-in options, such as agent team collaboration.',
         models: 'Select model',
         effort: 'Reasoning',
         back: 'Back',
@@ -260,9 +266,12 @@ window.__ModuleLoader__.load({
     /** Order + visibility of every left-rail panel entry. */
     const RAIL_CONFIG_KEY = 'dsh-islands-ui:rail';
     const ACCENT_KEY = 'dsh-islands-ui:accent';
+    /** Off by default: the native selector keeps its options, team mode included. */
+    const MODEL_OVERRIDE_KEY = 'dsh-islands-ui:model-override';
     const DEFAULT_ACCENT = '#4176e6';
     const ACCENT_PRESETS = ['#4176e6', '#7c5cff', '#1f9d63', '#e07a2e', '#d94f8a', '#d64545'];
     const listeners = new Set();
+    const modelOverrideListeners = new Set();
 
     function readStored() {
       try {
@@ -274,6 +283,7 @@ window.__ModuleLoader__.load({
     }
 
     let enabled = readStored();
+    let modelOverride = readModelOverride();
 
     /**
      * Set while the yield guard has stood the skin down: the host sidebar is
@@ -282,6 +292,12 @@ window.__ModuleLoader__.load({
      * (`enabled`) is untouched; only the attribute and the host writes stop.
      */
     let skinSuspended = false;
+    /**
+     * Installed by the model picker controller. `syncAttribute` calls it so a
+     * skin that steps aside hands the native selector back, and one that
+     * returns takes the composer over again only if the user asked for it.
+     */
+    let syncModelPickerOverride = null;
     /** Filled by the conversion effect so the settings page can ask for a retry. */
     let yieldRetry = null;
     /** Dismisses the yield prompt while one is on screen. */
@@ -309,6 +325,7 @@ window.__ModuleLoader__.load({
         setWorkspaceCollapsed(false);
         body.removeAttribute('data-islands-animating');
       }
+      syncModelPickerOverride?.();
     }
 
     function subscribe(listener) {
@@ -330,6 +347,39 @@ window.__ModuleLoader__.load({
       syncAttribute();
       syncCaretOverlay();
       for (const listener of listeners) listener();
+    }
+
+    function readModelOverride() {
+      try {
+        return window.localStorage.getItem(MODEL_OVERRIDE_KEY) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    function subscribeModelOverride(listener) {
+      modelOverrideListeners.add(listener);
+      return () => modelOverrideListeners.delete(listener);
+    }
+
+    function getModelOverrideSnapshot() {
+      return modelOverride;
+    }
+
+    function useModelOverride() {
+      return React.useSyncExternalStore(subscribeModelOverride, getModelOverrideSnapshot);
+    }
+
+    function setModelOverride(next) {
+      modelOverride = next === true;
+      try {
+        window.localStorage.setItem(MODEL_OVERRIDE_KEY, modelOverride ? '1' : '0');
+      } catch {
+        /* private mode: the choice still applies for this page. */
+      }
+      // The controller removes or re-registers the slot occupant; the settings
+      // switch itself renders from the same store.
+      for (const listener of modelOverrideListeners) listener();
     }
 
     function shortcutKeys(id, fallback = '') {
@@ -2870,6 +2920,7 @@ window.__ModuleLoader__.load({
       const caretYielded = caretCompat.status === 'yielded';
       const caretBlocked = caretCompat.status === 'missing' || caretYielded;
       const [accent, setAccent] = React.useState(readAccent);
+      const modelOverrideOn = useModelOverride();
       const [smooth, setSmooth] = React.useState(readSmoothCaretSetting);
       const smoothActive = smooth && !caretBlocked;
       // Opening the page re-probes: the composer may have mounted since the
@@ -3013,6 +3064,29 @@ window.__ModuleLoader__.load({
                 onChange: (event) => chooseAccent(event.target.value),
               }),
             ),
+          ),
+        ),
+        h(
+          'div',
+          { className: 'isl-prefRow' },
+          h(
+            'div',
+            { className: 'isl-prefText' },
+            h('div', { className: 'isl-prefTitle' }, copy.modelOverride),
+            h('div', { className: 'isl-prefDesc' }, copy.modelOverrideDesc),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'switch',
+              className: 'isl-switch',
+              'aria-checked': modelOverrideOn,
+              'aria-label': copy.modelOverride,
+              title: copy.modelOverride,
+              onClick: () => setModelOverride(!modelOverrideOn),
+            },
+            h('span', { className: 'isl-switchThumb' }),
           ),
         ),
         h(
@@ -3218,13 +3292,93 @@ window.__ModuleLoader__.load({
             ctx.slots.register({ name: 'shell.overlay', id: 'islands-pinned', order: -88 }, IslandsPinnedSection),
           );
 
-          ctx.inject(['slots', 'modelDirectories'], (scope) => {
+          // The model picker override is opt-in. The shipped selector renders
+          // the native `.options` rows (agent team collaboration, session
+          // options) that this menu does not replace, so shadowing it by default
+          // would hide those controls. Registering the occupant only while the
+          // switch is on keeps the native selector reachable; handing the slot
+          // back when the skin steps aside means the composer never loses its
+          // selector either.
+          ctx.inject(['slots', 'modelDirectories', 'shortcuts'], (scope) => {
             modelDirectories = scope.modelDirectories;
-            // Single slots render the lowest priority; a negative priority shadows
-            // the shipped selector without colliding with it.
-            scope.slots.inject('conversation.input.model', () =>
-              scope.slots.register({ name: 'conversation.input.model', priority: -1 }, ModelPicker),
-            );
+            shortcutsService = scope.shortcuts;
+
+            let slotOff = null;
+            let shortcutOff = null;
+
+            const sync = () => {
+              const active = modelOverride && document.body?.hasAttribute(ATTRIBUTE) === true;
+              if (active) {
+                if (slotOff === null) {
+                  // Single slots render the lowest priority; a negative priority
+                  // shadows the shipped selector without colliding with it.
+                  try {
+                    slotOff = scope.slots.inject('conversation.input.model', () =>
+                      scope.slots.register({ name: 'conversation.input.model', priority: -1 }, ModelPicker),
+                    );
+                  } catch (error) {
+                    console.warn('[islands-ui] model picker override unavailable', error);
+                    slotOff = null;
+                  }
+                }
+                if (shortcutOff === null) {
+                  try {
+                    shortcutOff = scope.shortcuts.register({
+                      id: 'islands.model.open',
+                      label: () => 'Model picker',
+                      aliases: [],
+                      defaults: {
+                        'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                        'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                        'desktop:linux': { code: 'KeyM', modifiers: ['primary', 'shift'] },
+                      },
+                      regions: ['page', 'editable'],
+                      modals: [],
+                      resolve: () => ({
+                        status: 'handled',
+                        run: () => window.dispatchEvent(new CustomEvent('islands:model-open')),
+                      }),
+                    });
+                  } catch (error) {
+                    console.warn('[islands-ui] model picker shortcut unavailable', error);
+                    shortcutOff = null;
+                  }
+                }
+              } else {
+                if (slotOff !== null) {
+                  const off = slotOff;
+                  slotOff = null;
+                  off();
+                }
+                if (shortcutOff !== null) {
+                  const off = shortcutOff;
+                  shortcutOff = null;
+                  off();
+                }
+              }
+            };
+
+            ctx.effect(() => {
+              sync();
+              syncModelPickerOverride = sync;
+              const offSetting = subscribeModelOverride(sync);
+              const offEnabled = subscribe(sync);
+              return () => {
+                if (syncModelPickerOverride === sync) syncModelPickerOverride = null;
+                offSetting();
+                offEnabled();
+                if (slotOff !== null) {
+                  const off = slotOff;
+                  slotOff = null;
+                  off();
+                }
+                if (shortcutOff !== null) {
+                  const off = shortcutOff;
+                  shortcutOff = null;
+                  off();
+                }
+              };
+            }, 'dsh-islands-ui: model picker override');
           });
 
           // Take the workspace shortcut over at the shortcut service layer: fixed
@@ -3233,35 +3387,8 @@ window.__ModuleLoader__.load({
           ctx.inject(['shortcuts'], (scope) => {
             shortcutsService = scope.shortcuts;
 
-            ctx.effect(
-              () => {
-                try {
-                  return scope.shortcuts.register({
-                    id: 'islands.model.open',
-                    label: () => 'Model picker',
-                    aliases: [],
-                    defaults: {
-                      'desktop:macos': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                      'desktop:windows': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                      'desktop:linux': { code: 'KeyM', modifiers: ['primary', 'shift'] },
-                    },
-                    regions: ['page', 'editable'],
-                    modals: [],
-                    resolve: () => ({
-                      status: 'handled',
-                      run: () => window.dispatchEvent(new CustomEvent('islands:model-open')),
-                    }),
-                  });
-                } catch (error) {
-                  console.warn('[islands-ui] model picker shortcut unavailable', error);
-                  return undefined;
-                }
-              },
-              'dsh-islands-ui: model picker shortcut',
-            );
-
             if (typeof scope.shortcuts.observeFixedInput !== 'function') return;
-          const off = scope.shortcuts.observeFixedInput((input) => {
+            const off = scope.shortcuts.observeFixedInput((input) => {
               if (input.type !== 'keydown') return;
               if (!document.body.hasAttribute(ATTRIBUTE)) return;
               const gesture = input.gesture;
